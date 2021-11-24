@@ -78,12 +78,16 @@ const IO_PORT_NAMES: [&'static str; 32] = [
 static ROM: &'static [u8] = include_bytes!("../roms/81-149c.rom");
 //static ROM: &'static [u8] = include_bytes!("../roms/81-232.rom");
 
+static COMMAND: &'static [u8] = "DIR\r\n".as_bytes();
+
 pub struct KayproMachine {
     ram: [u8; 65536],
     vram: [u8; 4096],
     system_bits: u8,
 
     trace_io: bool,
+
+    key_count: usize,
 
     pub floppy_controller: FloppyController,
 }
@@ -95,6 +99,7 @@ impl KayproMachine {
             vram: [0; 4096],
             system_bits: SystemBit::Bank as u8,
             trace_io: trace_io,
+            key_count: 0,
             floppy_controller: floppy_controller,
         }
     }
@@ -103,7 +108,7 @@ impl KayproMachine {
         for row in 0..25 {
             print!("{:2} < ", row);
             for col in 0..80 {
-                let mut ch = self.vram[(row * 80 + col) as usize];
+                let mut ch = self.vram[(row * 128 + col) as usize];
                 if ch < 20 {
                     ch = '@' as u8;
                 }
@@ -189,10 +194,22 @@ impl Machine for KayproMachine {
 
         let value = match port {
 
+            0x05 => {
+                let ch = COMMAND[self.key_count];
+                if self.key_count < COMMAND.len() - 1 {
+                    self.key_count += 1;
+                }
+                ch
+            }
+
             0x07 => {
                 self.print_screen();
-                //panic!("Keyboard not implemented");
-                0x01
+                if self.key_count > COMMAND.len() {
+                    //panic!("No more keys");
+                    0x00
+                } else {
+                    0x01 // There are keys
+                }
             },  
 
             // Floppy controller
