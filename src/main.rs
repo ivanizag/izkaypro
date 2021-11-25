@@ -16,7 +16,7 @@ Press ctrl-c to return to host";
 fn main() {
     let trace_io = false;
     let trace_cpu = false;
-    let trace_fdc = true;
+    let trace_fdc = false;
 
     // Init device
     let floppy_controller = FloppyController::new(trace_fdc);
@@ -61,10 +61,10 @@ fn main() {
             }
         }
 
-        if cpu.registers().pc() == 0x0132 {
-            machine.print_screen();
-            break;
-        }
+        //if cpu.registers().pc() == 0x0132 {
+        //    machine.print_screen();
+        //    break;
+        //}
 
         let dma = machine.peek16(0xfc14);
 

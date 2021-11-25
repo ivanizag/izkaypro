@@ -78,7 +78,7 @@ const IO_PORT_NAMES: [&'static str; 32] = [
 static ROM: &'static [u8] = include_bytes!("../roms/81-149c.rom");
 //static ROM: &'static [u8] = include_bytes!("../roms/81-232.rom");
 
-static COMMAND: &'static [u8] = "DIR\r\n".as_bytes();
+static COMMAND: &'static [u8] = "DIR\r-DIR\r-STAT\r-XXXX".as_bytes();
 
 pub struct KayproMachine {
     ram: [u8; 65536],
@@ -105,8 +105,9 @@ impl KayproMachine {
     }
 
     pub fn print_screen(&self) {
-        for row in 0..25 {
-            print!("{:2} < ", row);
+        println!("   //==================================================================================\\\\");
+        for row in 0..24 {
+            print!("{:2} || ", row);
             for col in 0..80 {
                 let mut ch = self.vram[(row * 128 + col) as usize];
                 if ch < 20 {
@@ -119,8 +120,9 @@ impl KayproMachine {
                     print!("\x1b[5m{}\x1b[25m", (ch & 0x7f) as char);
                 }
             }
-            println!(" >");
+            println!(" ||");
         }
+        println!("   \\\\==================================================================================//");
     }
 
     fn is_rom_rank(&self) -> bool {
@@ -195,18 +197,20 @@ impl Machine for KayproMachine {
         let value = match port {
 
             0x05 => {
-                let ch = COMMAND[self.key_count];
-                if self.key_count < COMMAND.len() - 1 {
+                if self.key_count >= COMMAND.len() {
+                    0x46
+                } else {
+                    let ch = COMMAND[self.key_count];
                     self.key_count += 1;
+                    ch
                 }
-                ch
             }
 
             0x07 => {
                 self.print_screen();
-                if self.key_count > COMMAND.len() {
-                    //panic!("No more keys");
-                    0x00
+                if self.key_count >= COMMAND.len() {
+                    panic!("No more keys");
+                    //0x00
                 } else {
                     0x01 // There are keys
                 }
@@ -220,7 +224,7 @@ impl Machine for KayproMachine {
             0x1c => self.system_bits,
             _ => 0xca,
         }; 
-        if self.trace_io {
+        if self.trace_io && port != 0x13 {
             println!("IN(0x{:02x} '{}') = 0x{:02x}", port, IO_PORT_NAMES[port as usize], value);
         }
         value
