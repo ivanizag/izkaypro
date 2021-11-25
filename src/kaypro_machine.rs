@@ -78,7 +78,7 @@ const IO_PORT_NAMES: [&'static str; 32] = [
 //static ROM: &'static [u8] = include_bytes!("../roms/81-149c.rom");
 static ROM: &'static [u8] = include_bytes!("../roms/81-232.rom");
 
-static COMMAND: &'static [u8] = "DIR A:D*.COM\r DIR\r-STAT\r-XXXX ".as_bytes();
+static COMMAND: &'static [u8] = "DIR A:*D.COM\r DIR\r STAT\rDIR\r BBCBASIC\rPRINT 1\r*BYE\r ".as_bytes();
 
 pub struct KayproMachine {
     ram: [u8; 65536],
@@ -88,6 +88,7 @@ pub struct KayproMachine {
     trace_io: bool,
 
     key_count: usize,
+    key_lapse: u8,
 
     pub floppy_controller: FloppyController,
 }
@@ -100,14 +101,15 @@ impl KayproMachine {
             system_bits: SystemBit::Bank as u8,
             trace_io: trace_io,
             key_count: 0,
+            key_lapse: 0,
             floppy_controller: floppy_controller,
         }
     }
 
     pub fn print_screen(&self) {
-        println!("   //==================================================================================\\\\");
+        println!("//==================================================================================\\\\");
         for row in 0..24 {
-            print!("{:2} || ", row);
+            print!("|| ");
             for col in 0..80 {
                 let mut ch = self.vram[(row * 128 + col) as usize];
                 if ch < 20 {
@@ -122,7 +124,7 @@ impl KayproMachine {
             }
             println!(" ||");
         }
-        println!("   \\\\==================================================================================//");
+        println!("\\\\==================================================================================//");
     }
 
     fn is_rom_rank(&self) -> bool {
@@ -207,11 +209,16 @@ impl Machine for KayproMachine {
             }
 
             0x07 => {
-                self.print_screen();
                 if self.key_count >= COMMAND.len() {
+                    self.print_screen();
                     panic!("No more keys");
                     //0x00
+                } else if self.key_lapse < 100 {
+                    self.key_lapse += 1;
+                    0x00
                 } else {
+                    self.print_screen();
+                    self.key_lapse = 0;
                     0x01 // There are keys
                 }
             },  
