@@ -2,7 +2,8 @@ const TRACK_COUNT: usize = 40;
 const SECTOR_COUNT: usize = 10; // For the DD disk
 const SECTOR_SIZE: usize = 512;
 
-static DISK_IMAGE: &'static [u8] = include_bytes!("../disks/KPII-149.BIN");
+//static DISK_IMAGE: &'static [u8] = include_bytes!("../disks/KPII-149.BIN");
+static DISK_IMAGE: &'static [u8] = include_bytes!("../disks/kayproii.img");
 
 
 pub struct FloppyController {
@@ -14,6 +15,8 @@ pub struct FloppyController {
 
     read_index: usize,
     read_last: usize,
+
+    data_buffer: Vec<u8>,
 
 
     pub raise_nmi: bool,
@@ -31,6 +34,8 @@ impl FloppyController {
 
             read_index: 0,
             read_last: 0,
+
+            data_buffer: Vec::new(),
 
             raise_nmi: false,
             trace: trace,
@@ -92,8 +97,13 @@ impl FloppyController {
                 println!("FDC: Read address");
             }
             self.inc_sector();
-            self.sector = 0x00;
             self.status = 0x00;
+            self.data_buffer.push(self.track);
+            self.data_buffer.push(self.disk);
+            self.data_buffer.push(self.sector);
+            self.data_buffer.push(2); // For sector size 512
+            self.data_buffer.push(0); // CRC 1
+            self.data_buffer.push(0); // CRC 2
             self.raise_nmi = true;
         } else if (command & 0xf0) == 0xd0 {
             // FORCE INTERRUPT command, type IV
@@ -107,6 +117,7 @@ impl FloppyController {
                 // The current command is terminated and busy is reset.
                 self.read_index = 0;
                 self.read_last = 0;
+                self.data_buffer.clear();
             } else {
                 panic!("FDC: Interrupt forced with non zero I");
             }
@@ -153,7 +164,11 @@ impl FloppyController {
 
     pub fn get_data(&mut self) -> u8 {
         let data = self.data;
-        if self.read_index < self.read_last {
+        if self.data_buffer.len() > 0 {
+            self.data = self.data_buffer[0];
+            self.data_buffer.remove(0);
+            self.raise_nmi = true;
+        } else if self.read_index < self.read_last {
             // Prepare next byte
             self.data = DISK_IMAGE[self.read_index];
             self.read_index += 1;

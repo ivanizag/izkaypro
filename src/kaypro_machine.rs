@@ -75,10 +75,10 @@ const IO_PORT_NAMES: [&'static str; 32] = [
     ];
 
 
-static ROM: &'static [u8] = include_bytes!("../roms/81-149c.rom");
-//static ROM: &'static [u8] = include_bytes!("../roms/81-232.rom");
+//static ROM: &'static [u8] = include_bytes!("../roms/81-149c.rom");
+static ROM: &'static [u8] = include_bytes!("../roms/81-232.rom");
 
-static COMMAND: &'static [u8] = "DIR\r-DIR\r-STAT\r-XXXX".as_bytes();
+static COMMAND: &'static [u8] = "DIR A:D*.COM\r DIR\r-STAT\r-XXXX ".as_bytes();
 
 pub struct KayproMachine {
     ram: [u8; 65536],
