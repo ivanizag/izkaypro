@@ -5,8 +5,8 @@ authors = ["Ivan Izaguirre <ivanizag@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-#iz80 = "^0.3.3"
-iz80 = {path = "../iz80"}
+iz80 = "^0.3.4"
+#iz80 = {path = "../iz80"}
 
 [target.'cfg(unix)'.dependencies]
 termios = "^0.3"

@@ -56,7 +56,9 @@ dependencies = [
 
 [[package]]
 name = "iz80"
-version = "0.3.2"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4402605422617e64e21322a13d17b5fe142ae65366ba8563b3afaf5012a1494d"
 
 [[package]]
 name = "izkaypro"
