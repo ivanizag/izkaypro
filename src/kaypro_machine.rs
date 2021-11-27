@@ -81,8 +81,8 @@ static ROM: &'static [u8] = include_bytes!("../roms/81-149c.rom");
 
 pub struct KayproMachine {
     ram: [u8; 65536],
-    vram: [u8; 4096],
-    vram_dirty: bool,
+    pub vram: [u8; 4096],
+    pub vram_dirty: bool,
     system_bits: u8,
 
     trace_io: bool,
@@ -102,35 +102,6 @@ impl KayproMachine {
             keyboard: Keyboard::new(),
             floppy_controller: floppy_controller,
         }
-    }
-
-    pub fn print_screen(&mut self) {
-        if !self.vram_dirty {
-            return;
-        }
-
-        // Move cursor up with ansi escape sequence
-        print!("\x1b[{}A", 26);
-
-        println!("//==================================================================================\\\\");
-        for row in 0..24 {
-            print!("|| ");
-            for col in 0..80 {
-                let mut ch = self.vram[(row * 128 + col) as usize];
-                if ch < 20 {
-                    ch = '@' as u8;
-                }
-                if ch & 0x80 == 0 {
-                    print!("{}", ch as char);
-                } else {
-                    // Blinking
-                    print!("\x1b[5m{}\x1b[25m", (ch & 0x7f) as char);
-                }
-            }
-            println!(" ||");
-        }
-        println!("\\\\==================================================================================//");
-        self.vram_dirty = false;
     }
 
     fn is_rom_rank(&self) -> bool {

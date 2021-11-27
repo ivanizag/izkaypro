@@ -3,9 +3,11 @@ use iz80::*;
 mod kaypro_machine;
 mod floppy_controller;
 mod keyboard_unix;
+mod screen;
 
 use self::kaypro_machine::KayproMachine;
 use self::floppy_controller::FloppyController;
+use self::screen::Screen;
 
 // Welcome message
 const WELCOME: &'static str =
@@ -22,6 +24,7 @@ fn main() {
 
     // Init device
     let floppy_controller = FloppyController::new(trace_fdc);
+    let screen = Screen::new();
     let mut machine = KayproMachine::new(floppy_controller, trace_io);
     let mut cpu = Cpu::new_z80();
     cpu.set_trace(trace_cpu);
@@ -35,7 +38,7 @@ fn main() {
         counter += 1;
 
         if counter % 1024 == 0 {
-            machine.print_screen();
+            screen.update(&mut machine);
         }
 
         if machine.floppy_controller.raise_nmi {
@@ -59,7 +62,7 @@ fn main() {
                 machine.floppy_controller.raise_nmi = false;
                 cpu.signal_nmi();
             } else {
-                machine.print_screen();
+                screen.update(&mut machine);
                 println!("HALT instruction that will never be interrupted");
                 //cpu.signal_nmi();
                 break;
