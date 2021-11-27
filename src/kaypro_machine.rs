@@ -2,6 +2,7 @@ use std::fmt;
 
 use iz80::Machine;
 use super::FloppyController;
+use super::keyboard_unix::Keyboard;
 
 /* Memory map:
 
@@ -75,21 +76,18 @@ const IO_PORT_NAMES: [&'static str; 32] = [
     ];
 
 
-//static ROM: &'static [u8] = include_bytes!("../roms/81-149c.rom");
-static ROM: &'static [u8] = include_bytes!("../roms/81-232.rom");
-
-static COMMAND: &'static [u8] = "DIR A:*D.COM\r DIR\r STAT\rDIR\r BBCBASIC\rPRINT 1\r*BYE\r ".as_bytes();
+static ROM: &'static [u8] = include_bytes!("../roms/81-149c.rom");
+//static ROM: &'static [u8] = include_bytes!("../roms/81-232.rom");
 
 pub struct KayproMachine {
     ram: [u8; 65536],
     vram: [u8; 4096],
+    vram_dirty: bool,
     system_bits: u8,
 
     trace_io: bool,
 
-    key_count: usize,
-    key_lapse: u8,
-
+    keyboard: Keyboard,
     pub floppy_controller: FloppyController,
 }
 
@@ -98,15 +96,22 @@ impl KayproMachine {
         KayproMachine {
             ram: [0; 65536],
             vram: [0; 4096],
+            vram_dirty: false,
             system_bits: SystemBit::Bank as u8,
             trace_io: trace_io,
-            key_count: 0,
-            key_lapse: 0,
+            keyboard: Keyboard::new(),
             floppy_controller: floppy_controller,
         }
     }
 
-    pub fn print_screen(&self) {
+    pub fn print_screen(&mut self) {
+        if !self.vram_dirty {
+            return;
+        }
+
+        // Move cursor up with ansi escape sequence
+        print!("\x1b[{}A", 26);
+
         println!("//==================================================================================\\\\");
         for row in 0..24 {
             print!("|| ");
@@ -125,6 +130,7 @@ impl KayproMachine {
             println!(" ||");
         }
         println!("\\\\==================================================================================//");
+        self.vram_dirty = false;
     }
 
     fn is_rom_rank(&self) -> bool {
@@ -148,6 +154,7 @@ impl Machine for KayproMachine {
             // Ignore writes to ROM
         } else if address < 0x4000 && self.is_rom_rank() {
             self.vram[address as usize - 0x3000] = value;
+            self.vram_dirty = true;
         } else {
             self.ram[address as usize] = value;
         }
@@ -198,30 +205,8 @@ impl Machine for KayproMachine {
 
         let value = match port {
 
-            0x05 => {
-                if self.key_count >= COMMAND.len() {
-                    0x46
-                } else {
-                    let ch = COMMAND[self.key_count];
-                    self.key_count += 1;
-                    ch
-                }
-            }
-
-            0x07 => {
-                if self.key_count >= COMMAND.len() {
-                    self.print_screen();
-                    panic!("No more keys");
-                    //0x00
-                } else if self.key_lapse < 100 {
-                    self.key_lapse += 1;
-                    0x00
-                } else {
-                    self.print_screen();
-                    self.key_lapse = 0;
-                    0x01 // There are keys
-                }
-            },  
+            0x05 => self.keyboard.get_key(),
+            0x07 => if self.keyboard.is_key_pressed() {0x01} else {0x00},
 
             // Floppy controller
             0x10 => self.floppy_controller.get_status(),

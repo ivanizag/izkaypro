@@ -7,3 +7,9 @@ edition = "2018"
 [dependencies]
 #iz80 = "^0.3.3"
 iz80 = {path = "../iz80"}
+
+[target.'cfg(unix)'.dependencies]
+termios = "^0.3"
+
+[target.'cfg(windows)'.dependencies]
+crossterm = "^0.17"

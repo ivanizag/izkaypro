@@ -1,9 +1,9 @@
-const TRACK_COUNT: usize = 40;
+//const TRACK_COUNT: usize = 40;
 const SECTOR_COUNT: usize = 10; // For the DD disk
 const SECTOR_SIZE: usize = 512;
 
-//static DISK_IMAGE: &'static [u8] = include_bytes!("../disks/KPII-149.BIN");
-static DISK_IMAGE: &'static [u8] = include_bytes!("../disks/kayproii.img");
+static DISK_IMAGE: &'static [u8] = include_bytes!("../disks/KPII-149.BIN");
+//static DISK_IMAGE: &'static [u8] = include_bytes!("../disks/kayproii.img");
 
 
 pub struct FloppyController {
