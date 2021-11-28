@@ -24,6 +24,19 @@ pub struct FloppyController {
     pub trace: bool
 }
 
+#[derive(Copy, Clone)]
+#[repr(u8)]
+pub enum FDCStatus {
+    _NotReady = 0x01,
+    _WriteProtected = 0x02,
+    _WriteFault = 0x04,
+    _RecorddNotFound = 0x08,
+    _CRCError = 0x10,
+    LostDataOrTrack0 = 0x20,
+    _DataRequest = 0x40,
+    Busy = 0x80,
+}
+
 impl FloppyController {
     pub fn new(trace: bool) -> FloppyController {
         FloppyController {
@@ -61,7 +74,7 @@ impl FloppyController {
             self.read_index = 0;
             self.read_last = 0;
             self.track = 0x00;
-            self.status = 0x00; // TODO: track 0 should probably be set
+            self.status = FDCStatus::LostDataOrTrack0 as u8;
             self.raise_nmi = true;
 
         } else if (command & 0xf0) == 0x10 {
@@ -89,7 +102,7 @@ impl FloppyController {
             self.read_last = self.read_index + SECTOR_SIZE;
             self.data = self.content[self.read_index];
             self.read_index += 1;
-            self.status = 0x80;
+            self.status = FDCStatus::Busy as u8;
             self.raise_nmi = true;
 
         } else if (command & 0xe0) == 0xa0 {
@@ -107,7 +120,7 @@ impl FloppyController {
 
             self.read_index = (self.track as usize * SECTOR_COUNT + self.sector as usize) * SECTOR_SIZE;
             self.read_last = self.read_index + SECTOR_SIZE;
-            self.status = 0x80;
+            self.status = FDCStatus::Busy as u8;
             self.raise_nmi = true;
 
         } else if (command & 0xf0) == 0xc0 {
@@ -117,7 +130,7 @@ impl FloppyController {
                 println!("FDC: Read address");
             }
             self.inc_sector();
-            self.status = 0x00;
+            self.status = 0;
             self.data_buffer.push(self.track);
             self.data_buffer.push(self.disk);
             self.data_buffer.push(self.sector);
