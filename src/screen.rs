@@ -3,6 +3,12 @@ use super::KayproMachine;
 pub struct Screen {
 }
 
+const CONTROL_CHARS: [char; 32] = [
+    '`', 'α', 'β', 'γ', 'δ', 'ϵ', 'ϕ', 'ν',
+    'θ', 'ι', 'σ', 'κ', 'λ', 'μ', 'υ', 'ω',
+    'π', 'η', 'ρ', 'Σ', 'τ', 'χ', 'ψ', '≠',
+    'Ξ', 'Ω', 'ζ', '{', '|', '}', '~', '█'];
+
 impl Screen {
     pub fn new() -> Screen {
         Screen {
@@ -21,15 +27,13 @@ impl Screen {
         for row in 0..24 {
             print!("|| ");
             for col in 0..80 {
-                let mut ch = machine.vram[(row * 128 + col) as usize];
-                if ch < 20 {
-                    ch = '@' as u8;
-                }
-                if ch & 0x80 == 0 {
-                    print!("{}", ch as char);
+                let code = machine.vram[(row * 128 + col) as usize];
+                let ch = translate_char(code);
+                if code & 0x80 == 0 {
+                    print!("{}", ch);
                 } else {
                     // Blinking
-                    print!("\x1b[5m{}\x1b[25m", (ch & 0x7f) as char);
+                    print!("\x1b[5m{}\x1b[25m", ch);
                 }
             }
             println!(" ||");
@@ -37,5 +41,15 @@ impl Screen {
         println!("\\\\==================================================================================//");
         machine.vram_dirty = false;
     }
+}
 
+fn translate_char(code: u8) -> char {
+    let index = code & 0x7f;
+    if index < 0x20 {
+        CONTROL_CHARS[index as usize]
+    } else if index == 0x7f {
+        '▒'
+    } else {
+        index as char
+    }
 }
