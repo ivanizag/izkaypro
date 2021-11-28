@@ -2,8 +2,8 @@
 const SECTOR_COUNT: usize = 10; // For the DD disk
 const SECTOR_SIZE: usize = 512;
 
-static DISK_IMAGE: &'static [u8] = include_bytes!("../disks/KPII-149.BIN");
-//static DISK_IMAGE: &'static [u8] = include_bytes!("../disks/kayproii.img");
+//static DISK_IMAGE: &'static [u8] = include_bytes!("../disks/KPII-149.BIN");
+static DISK_IMAGE: &'static [u8] = include_bytes!("../disks/kayproii.img");
 
 
 pub struct FloppyController {
@@ -12,6 +12,7 @@ pub struct FloppyController {
     track: u8,
     sector: u8,
     data: u8,
+    content: Vec<u8>,
 
     read_index: usize,
     read_last: usize,
@@ -31,6 +32,7 @@ impl FloppyController {
             track: 0,
             sector: 0,
             data: 0,
+            content: DISK_IMAGE.to_vec(),
 
             read_index: 0,
             read_last: 0,
@@ -73,7 +75,7 @@ impl FloppyController {
             self.status = 0;
             self.raise_nmi = true;
         
-        } else if (command & 0xd0) == 0x80 {
+        } else if (command & 0xe0) == 0x80 {
             // READ SECTOR command, type II
             // 100mFEFx
             if command & 0x10 != 0 {
@@ -85,8 +87,26 @@ impl FloppyController {
 
             self.read_index = (self.track as usize * SECTOR_COUNT + self.sector as usize) * SECTOR_SIZE;
             self.read_last = self.read_index + SECTOR_SIZE;
-            self.data = DISK_IMAGE[self.read_index];
+            self.data = self.content[self.read_index];
             self.read_index += 1;
+            self.status = 0x80;
+            self.raise_nmi = true;
+
+        } else if (command & 0xe0) == 0xa0 {
+            // WRITE SECTOR command, type II
+            // 101mFEFa
+            if command & 0x10 != 0 {
+                panic!("Multiple sector reads not supported")
+            }
+            if command & 0x01 != 0 {
+                panic!("Delete data mark not supported")
+            }
+            if self.trace {
+                println!("FDC: Write sector (T:{}, S:{})", self.track, self.sector);
+            }
+
+            self.read_index = (self.track as usize * SECTOR_COUNT + self.sector as usize) * SECTOR_SIZE;
+            self.read_last = self.read_index + SECTOR_SIZE;
             self.status = 0x80;
             self.raise_nmi = true;
 
@@ -157,6 +177,24 @@ impl FloppyController {
 
     pub fn put_data(&mut self, value: u8) {
         self.data = value;
+
+        if self.read_index < self.read_last {
+            // Store byte
+            self.content[self.read_index] = self.data;
+            self.read_index += 1;
+            self.raise_nmi = true;
+            if self.read_index == self.read_last {
+                // We are done writing
+                if self.trace {
+                    println!("FDC: Set data completed ${:02x} {}-{}-{}", self.data, self.read_index, self.read_last, self.sector);
+                }
+                self.status = 0;
+                self.read_index = 0;
+                self.read_last = 0;
+                self.sector += 1;
+            }
+        }
+
         //if self.trace {
         //    println!("FDC: Set data ${:02x}", value);
         //}
@@ -170,11 +208,14 @@ impl FloppyController {
             self.raise_nmi = true;
         } else if self.read_index < self.read_last {
             // Prepare next byte
-            self.data = DISK_IMAGE[self.read_index];
+            self.data = self.content[self.read_index];
             self.read_index += 1;
             self.raise_nmi = true;
         } else if self.read_index != 0 {
             // We are done reading
+            if self.trace {
+                println!("FDC: Get data completed ${:02x} {}-{}-{}", data, self.read_index, self.read_last, self.sector);
+            }
             self.status = 0;
             self.read_index = 0;
             self.read_last = 0;

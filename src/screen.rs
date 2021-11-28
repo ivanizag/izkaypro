@@ -1,5 +1,4 @@
 use super::KayproMachine;
-use super::keyboard_unix::Keyboard;
 
 pub struct Screen {
     in_place: bool,

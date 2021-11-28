@@ -21,12 +21,18 @@ fn main() {
     let trace_cpu = false;
     let trace_fdc = false;
     let trace_bios = false;
-    let any_trace = trace_io || trace_cpu || trace_fdc || trace_bios;
+    let trace_system_bits = false;
+    let any_trace = trace_io
+        || trace_cpu
+        || trace_fdc
+        || trace_bios
+        || trace_system_bits;
 
     // Init device
     let floppy_controller = FloppyController::new(trace_fdc);
     let screen = Screen::new(!any_trace);
-    let mut machine = KayproMachine::new(floppy_controller, trace_io);
+    let mut machine = KayproMachine::new(floppy_controller,
+        trace_io, trace_system_bits);
     let mut cpu = Cpu::new_z80();
     cpu.set_trace(trace_cpu);
 
@@ -40,7 +46,7 @@ fn main() {
         cpu.execute_instruction(&mut machine);
         counter += 1;
 
-        if counter % 1024 == 0 {
+        if counter % 2048 == 0 {
             screen.update(&mut machine);
         }
 
@@ -49,7 +55,7 @@ fn main() {
             next_signal = counter + 1000;
         }
 
-        if counter == next_signal {
+        if next_signal != 0 && counter >= next_signal {
             cpu.signal_nmi();
             next_signal = 0;
         }
@@ -60,15 +66,10 @@ fn main() {
         }
 
         if cpu.is_halted() {
-            if machine.floppy_controller.raise_nmi {
-                machine.floppy_controller.raise_nmi = false;
-                cpu.signal_nmi();
-            } else {
-                screen.update(&mut machine);
-                println!("HALT instruction that will never be interrupted");
-                //cpu.signal_nmi();
-                break;
-            }
+            screen.update(&mut machine);
+            println!("HALT instruction that will never be interrupted");
+            //cpu.signal_nmi();
+            break;
         }
 
         if trace_bios {

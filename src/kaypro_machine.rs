@@ -1,5 +1,3 @@
-use std::fmt;
-
 use iz80::Machine;
 use super::FloppyController;
 use super::keyboard_unix::Keyboard;
@@ -21,23 +19,9 @@ pub enum SystemBit {
     Unused = 0x04,
     CentronicsReady = 0x08,
     CentronicsStrobe = 0x10,
-    DoubleDensity = 0x20,
+    SingleDensity = 0x20,
     Motors = 0x40,
     Bank = 0x80,
-}
-
-impl fmt::Display for SystemBit {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if *self as u8 & SystemBit::DriveA as u8 != 0           {write!(f, "DriveA ")?;}
-        if *self as u8 & SystemBit::DriveB as u8 != 0           {write!(f, "DriveB ")?;}
-        if *self as u8 & SystemBit::Unused as u8 != 0           {write!(f, "Unused ")?;}
-        if *self as u8 & SystemBit::CentronicsReady  as u8 != 0 {write!(f, "CentronicsReady ")?;}
-        if *self as u8 & SystemBit::CentronicsStrobe as u8 != 0 {write!(f, "CentronicsStrobe ")?;}
-        if *self as u8 & SystemBit::DoubleDensity as u8 != 0    {write!(f, "DoubleDensity ")?;}
-        if *self as u8 & SystemBit::Motors as u8 != 0           {write!(f, "Motors ")?;}
-        if *self as u8 & SystemBit::Bank as u8 != 0             {write!(f, "ROM ")?;}
-        Ok(())
-    }
 }
 
 const IO_PORT_NAMES: [&'static str; 32] = [
@@ -86,19 +70,22 @@ pub struct KayproMachine {
     system_bits: u8,
 
     trace_io: bool,
+    trace_system_bits: bool,
 
     pub keyboard: Keyboard,
     pub floppy_controller: FloppyController,
 }
 
 impl KayproMachine {
-    pub fn new(floppy_controller: FloppyController, trace_io: bool) -> KayproMachine {
+    pub fn new(floppy_controller: FloppyController,
+            trace_io: bool, trace_system_bits: bool) -> KayproMachine {
         KayproMachine {
             ram: [0; 65536],
             vram: [0; 4096],
             vram_dirty: false,
             system_bits: SystemBit::Bank as u8,
             trace_io: trace_io,
+            trace_system_bits: trace_system_bits,
             keyboard: Keyboard::new(),
             floppy_controller: floppy_controller,
         }
@@ -136,7 +123,7 @@ impl Machine for KayproMachine {
     fn port_out(&mut self, address: u16, value: u8) {
 
         let port = address as u8 & 0b_1001_1111; // Pins used
-        if port > 0x80 {
+        if port >= 0x80 {
             // Pin 7 is tied to enable of the 3-8 decoder
             if self.trace_io {
                 println!("OUT(0x{:02x} 'Ignored', 0x{:02x})", port, value);
@@ -144,7 +131,7 @@ impl Machine for KayproMachine {
             return
         }
 
-        if self.trace_io {
+        if self.trace_io && port != 0x1c {
             println!("OUT(0x{:02x} '{}', 0x{:02x}): ", port, IO_PORT_NAMES[port as usize], value);
         }
         match port {
@@ -156,8 +143,8 @@ impl Machine for KayproMachine {
             // System bits
             0x1c => {
                 self.system_bits = value;
-                if self.trace_io {
-                    println!("{}", self.system_bits);
+                if self.trace_system_bits {
+                    print_system_bits(self.system_bits);
                 }
             },
             _ => {}
@@ -166,8 +153,7 @@ impl Machine for KayproMachine {
 
     fn port_in(&mut self, address: u16) -> u8 {
         let port = address as u8 & 0b_1001_1111; // Pins used
-        if port > 0x80 {
-            // Pin 7 is tied to enable of the 3-8 decoder
+        if port > 0x80 { // Pin 7 is tied to enable of the 3-8 decoder
             if self.trace_io {
                 println!("IN(0x{:02x} 'Ignored')", port);
             }
@@ -187,9 +173,22 @@ impl Machine for KayproMachine {
             0x1c => self.system_bits,
             _ => 0xca,
         }; 
-        if self.trace_io && port != 0x13 {
+        if self.trace_io && port != 0x13 && port != 0x07 && port != 0x1c {
             println!("IN(0x{:02x} '{}') = 0x{:02x}", port, IO_PORT_NAMES[port as usize], value);
         }
         value
     }
+}
+
+fn print_system_bits(system_bits: u8) {
+    print!("System bits: ");
+    if system_bits & SystemBit::DriveA as u8 != 0           {print!("DriveA ");}
+    if system_bits & SystemBit::DriveB as u8 != 0           {print!("DriveB ");}
+    if system_bits & SystemBit::Unused as u8 != 0           {print!("Unused ");}
+    if system_bits & SystemBit::CentronicsReady  as u8 != 0 {print!("CentronicsReady ");}
+    if system_bits & SystemBit::CentronicsStrobe as u8 != 0 {print!("CentronicsStrobe ");}
+    if system_bits & SystemBit::SingleDensity as u8 != 0    {print!("SingleDensity ");}
+    if system_bits & SystemBit::Motors as u8 != 0           {print!("MotorsOff ");}
+    if system_bits & SystemBit::Bank as u8 != 0             {print!("ROM ");}
+    println!();
 }
