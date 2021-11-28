@@ -42,6 +42,10 @@ impl Keyboard {
             let size = stdin().read(&mut buf).unwrap_or(0);
             if size != 0 {
                 self.key = *buf.last().unwrap();
+                self.key = match self.key {
+                    0x7f => 0x08, // Backspace to ^H
+                    _ => self.key,
+                };
                 self.key_available = true;
             }
         }
@@ -53,6 +57,11 @@ impl Keyboard {
         self.key_available = false;
         self.key
     }
+
+    pub fn peek_key(&mut self) -> u8 {
+        self.key
+    }
+
 
 }
 

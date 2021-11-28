@@ -21,16 +21,19 @@ fn main() {
     let trace_cpu = false;
     let trace_fdc = false;
     let trace_bios = false;
+    let any_trace = trace_io || trace_cpu || trace_fdc || trace_bios;
 
     // Init device
     let floppy_controller = FloppyController::new(trace_fdc);
-    let screen = Screen::new();
+    let screen = Screen::new(!any_trace);
     let mut machine = KayproMachine::new(floppy_controller, trace_io);
     let mut cpu = Cpu::new_z80();
     cpu.set_trace(trace_cpu);
 
     // Start the cpu
     println!("{}", WELCOME);
+    screen.init();
+
     let mut counter: u64 = 1;
     let mut next_signal: u64 = 0;
     loop {
@@ -42,7 +45,6 @@ fn main() {
         }
 
         if machine.floppy_controller.raise_nmi {
-            //cpu.set_trace(true);
             machine.floppy_controller.raise_nmi = false;
             next_signal = counter + 1000;
         }

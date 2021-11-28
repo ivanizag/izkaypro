@@ -87,7 +87,7 @@ pub struct KayproMachine {
 
     trace_io: bool,
 
-    keyboard: Keyboard,
+    pub keyboard: Keyboard,
     pub floppy_controller: FloppyController,
 }
 

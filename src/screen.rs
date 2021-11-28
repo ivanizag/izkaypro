@@ -1,6 +1,8 @@
 use super::KayproMachine;
+use super::keyboard_unix::Keyboard;
 
 pub struct Screen {
+    in_place: bool,
 }
 
 const CONTROL_CHARS: [char; 32] = [
@@ -10,8 +12,17 @@ const CONTROL_CHARS: [char; 32] = [
     'Ξ', 'Ω', 'ζ', '{', '|', '}', '~', '█'];
 
 impl Screen {
-    pub fn new() -> Screen {
+    pub fn new(in_place: bool) -> Screen {
         Screen {
+            in_place: in_place,
+        }
+    }
+
+    pub fn init(&self) {
+        if self.in_place {
+            for _ in 0..27 {
+                println!();
+            }
         }
     }
 
@@ -21,9 +32,12 @@ impl Screen {
         }
 
         // Move cursor up with ansi escape sequence
-        print!("\x1b[{}A", 26);
+        if self.in_place {
+            print!("\x1b[{}A", 26);
+        }
 
-        println!("//==================================================================================\\\\");
+        println!("//====Last key: 0x{:02x}================================================================\\\\", machine.keyboard.peek_key());
+        //println!("//==================================================================================\\\\");
         for row in 0..24 {
             print!("|| ");
             for col in 0..80 {
