@@ -94,6 +94,19 @@ impl KayproMachine {
     fn is_rom_rank(&self) -> bool {
         self.system_bits & SystemBit::Bank as u8 != 0
     }
+
+    fn update_system_bits(&mut self, bits: u8) {
+        self.system_bits = bits;
+        if bits & SystemBit::DriveA as u8 != 0 {
+            self.floppy_controller.set_disk(0);
+        } else if bits & SystemBit::DriveB as u8 != 0 {
+            self.floppy_controller.set_disk(1);
+        }
+
+        if self.trace_system_bits {
+            print_system_bits(self.system_bits);
+        }
+    }
 }
 
 impl Machine for KayproMachine {
@@ -118,8 +131,6 @@ impl Machine for KayproMachine {
         }
     }
 
-
-
     fn port_out(&mut self, address: u16, value: u8) {
 
         let port = address as u8 & 0b_1001_1111; // Pins used
@@ -141,12 +152,7 @@ impl Machine for KayproMachine {
             0x12 => self.floppy_controller.put_sector(value),
             0x13 => self.floppy_controller.put_data(value),
             // System bits
-            0x1c => {
-                self.system_bits = value;
-                if self.trace_system_bits {
-                    print_system_bits(self.system_bits);
-                }
-            },
+            0x1c => self.update_system_bits(value),
             _ => {}
         } 
     }

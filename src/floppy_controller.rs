@@ -2,8 +2,8 @@
 const SECTOR_COUNT: usize = 10; // For the DD disk
 const SECTOR_SIZE: usize = 512;
 
-//static DISK_IMAGE: &'static [u8] = include_bytes!("../disks/KPII-149.BIN");
-static DISK_IMAGE: &'static [u8] = include_bytes!("../disks/kayproii.img");
+static DISK_IMAGE: &'static [u8] = include_bytes!("../disks/KPII-149.BIN");
+static DISK_IMAGE_CPMISH: &'static [u8] = include_bytes!("../disks/kayproii.img");
 
 
 pub struct FloppyController {
@@ -12,7 +12,8 @@ pub struct FloppyController {
     track: u8,
     sector: u8,
     data: u8,
-    content: Vec<u8>,
+    content_a: Vec<u8>,
+    content_b: Vec<u8>,
 
     read_index: usize,
     read_last: usize,
@@ -45,7 +46,8 @@ impl FloppyController {
             track: 0,
             sector: 0,
             data: 0,
-            content: DISK_IMAGE.to_vec(),
+            content_a: DISK_IMAGE.to_vec(),
+            content_b: DISK_IMAGE_CPMISH.to_vec(),
 
             read_index: 0,
             read_last: 0,
@@ -54,6 +56,18 @@ impl FloppyController {
 
             raise_nmi: false,
             trace: trace,
+        }
+    }
+
+    pub fn set_disk(&mut self, disk: u8) {
+        self.disk = disk;
+    }
+
+    fn content(&mut self) -> &mut Vec<u8> {
+        if self.disk == 0 {
+            &mut self.content_a
+        } else {
+            &mut self.content_b
         }
     }
 
@@ -100,7 +114,8 @@ impl FloppyController {
 
             self.read_index = (self.track as usize * SECTOR_COUNT + self.sector as usize) * SECTOR_SIZE;
             self.read_last = self.read_index + SECTOR_SIZE;
-            self.data = self.content[self.read_index];
+            let read_index = self.read_index;
+            self.data = self.content()[read_index];
             self.read_index += 1;
             self.status = FDCStatus::Busy as u8;
             self.raise_nmi = true;
@@ -193,7 +208,8 @@ impl FloppyController {
 
         if self.read_index < self.read_last {
             // Store byte
-            self.content[self.read_index] = self.data;
+            let read_index = self.read_index;
+            self.content()[read_index] = self.data;
             self.read_index += 1;
             self.raise_nmi = true;
             if self.read_index == self.read_last {
@@ -221,7 +237,8 @@ impl FloppyController {
             self.raise_nmi = true;
         } else if self.read_index < self.read_last {
             // Prepare next byte
-            self.data = self.content[self.read_index];
+            let read_index = self.read_index;
+            self.data = self.content()[read_index];
             self.read_index += 1;
             self.raise_nmi = true;
         } else if self.read_index != 0 {
