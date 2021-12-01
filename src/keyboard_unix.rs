@@ -44,7 +44,7 @@ impl Keyboard {
                 self.key = *buf.last().unwrap();
                 self.key = match self.key {
                     0x7f => 0x08, // Backspace to ^H
-                    _ => self.key,
+                    _ => self.key & 0x7f,
                 };
                 self.key_available = true;
             }

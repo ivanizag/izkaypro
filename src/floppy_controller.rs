@@ -1,10 +1,11 @@
-//const TRACK_COUNT: usize = 40;
+use std::fs::File;
+use std::io::{Read /*, Write*/};
+
 const SECTOR_COUNT: usize = 10; // For the DD disk
 const SECTOR_SIZE: usize = 512;
 
-static DISK_IMAGE: &'static [u8] = include_bytes!("../disks/KPII-149.BIN");
-static DISK_IMAGE_CPMISH: &'static [u8] = include_bytes!("../disks/kayproii.img");
-
+static DISK_IMAGE_DEFAULT: &'static [u8] = include_bytes!("../disks/KPII-149.BIN");
+static DISK_IMAGE_DEFAULT_2: &'static [u8] = include_bytes!("../disks/K-PFILER.BIN");
 
 pub struct FloppyController {
     status: u8,
@@ -46,8 +47,8 @@ impl FloppyController {
             track: 0,
             sector: 0,
             data: 0,
-            content_a: DISK_IMAGE.to_vec(),
-            content_b: DISK_IMAGE_CPMISH.to_vec(),
+            content_a: DISK_IMAGE_DEFAULT.to_vec(),
+            content_b: DISK_IMAGE_DEFAULT_2.to_vec(),
 
             read_index: 0,
             read_last: 0,
@@ -56,6 +57,18 @@ impl FloppyController {
 
             raise_nmi: false,
             trace: trace,
+        }
+    }
+
+    pub fn load_disk(&mut self, filename: &str, disk_b: bool) {
+        // Load the file contents in content_a
+        let mut file = File::open(filename).unwrap();
+        let mut content = Vec::new();
+        file.read_to_end(&mut content).unwrap();
+        if disk_b {
+            self.content_b = content;
+        } else {
+            self.content_a = content;
         }
     }
 

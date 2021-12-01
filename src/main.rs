@@ -1,3 +1,4 @@
+use clap::{Arg, App};
 use iz80::*;
 
 mod kaypro_machine;
@@ -17,15 +18,50 @@ Press ctrl-c to return to host";
 
 
 fn main() {
-    let trace_io = false;
-    let trace_cpu = false;
-    let trace_fdc = false;
-    let trace_bios = false;
-    let trace_system_bits = false;
+    // Parse arguments
+    let matches = App::new(WELCOME)
+        .arg(Arg::with_name("DISKA")
+            .help("Disk A: image file. Empty or $ to load CP/M")
+            .required(false)
+            .index(1))
+        .arg(Arg::with_name("DISKB")
+            .help("Disk B: image file. Default is a blank disk")
+            .required(false)
+            .index(2))
+        .arg(Arg::with_name("cpu_trace")
+            .short("c")
+            .long("cpu-trace")
+            .help("Traces CPU instructions execuions"))
+        .arg(Arg::with_name("io_trace")
+            .short("i")
+            .long("io-trace")
+            .help("Traces ports IN and OUT"))
+        .arg(Arg::with_name("fdc_trace")
+            .short("f")
+            .long("fdc-trace")
+            .help("Traces access to the floppy disk controller"))
+        .arg(Arg::with_name("system_bits")
+            .short("s")
+            .long("system-bits")
+            .help("Traces changes to the system bits values"))
+        .arg(Arg::with_name("rom_trace")
+            .short("ro")
+            .long("rom-trace")
+            .help("Traces calls to the ROM entrypoints"))
+        .get_matches();
+
+    let disk_a = matches.value_of("DISKA");
+    let disk_b = matches.value_of("DISKB");
+    let trace_cpu = matches.is_present("cpu_trace");
+    let trace_io = matches.is_present("io_trace");
+    let trace_fdc = matches.is_present("fdc_trace");
+    let trace_system_bits = matches.is_present("system_bits");
+    let trace_rom = matches.is_present("rom_trace");
+
     let any_trace = trace_io
         || trace_cpu
         || trace_fdc
-        || trace_bios
+        || trace_rom
         || trace_system_bits;
 
     // Init device
@@ -35,6 +71,17 @@ fn main() {
         trace_io, trace_system_bits);
     let mut cpu = Cpu::new_z80();
     cpu.set_trace(trace_cpu);
+
+    // Load disk images
+    if let Some(disk_a) = disk_a {
+        if  disk_a != "$" {
+            machine.floppy_controller.load_disk(disk_a, false);
+        }
+    }
+    if let Some(disk_b) = disk_b {
+        println!("B: {}", disk_b);
+        machine.floppy_controller.load_disk(disk_b, true);
+    }
 
     // Start the cpu
     println!("{}", WELCOME);
@@ -68,11 +115,10 @@ fn main() {
         if cpu.is_halted() {
             screen.update(&mut machine);
             println!("HALT instruction that will never be interrupted");
-            //cpu.signal_nmi();
             break;
         }
 
-        if trace_bios {
+        if trace_rom && machine.is_rom_rank(){
             let dma = machine.peek16(0xfc14);
             match cpu.registers().pc() {
                 0x004b => println!("EP_COLD"),
@@ -89,15 +135,6 @@ fn main() {
                 0x03e4 => println!("EP_SECTRAN"),
                 0x040f => println!("EP_DISKON"),
                 0x041e => println!("EP_DISKOFF"),
-                /*
-                0x00c5 => println!("FUNC: First read sector in boot"),
-                0x00c8 => println!("FUNC: Back from first read sector in boot"),
-                0x00e7 => println!("FUNC: Back from read sector"),
-                0x03e0 => println!("FUNC: Set sector C"),
-                0x0425 => println!("FUNC: Wait"),
-                0x0481 => println!("FUNC: Back from read internal"),
-                0xfee8 => println!("FUNC: Reloc read internal"),
-                */
                 0xfa00 => println!("FUNC: OS start"),
                 _ => {}
             }

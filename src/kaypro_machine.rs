@@ -91,7 +91,7 @@ impl KayproMachine {
         }
     }
 
-    fn is_rom_rank(&self) -> bool {
+    pub fn is_rom_rank(&self) -> bool {
         self.system_bits & SystemBit::Bank as u8 != 0
     }
 
