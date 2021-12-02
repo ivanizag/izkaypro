@@ -4,9 +4,15 @@ use termios::*;
 
 const STDIN_FD: i32 = 0;
 
+pub enum Command {
+    Help,
+    Quit,
+}
+
 pub struct Keyboard {
     initial_termios: Option<Termios>,
     key: u8,
+    pub commands: Vec<Command>,
     key_available: bool,
 }
 
@@ -18,6 +24,7 @@ impl Keyboard {
         let c = Keyboard {
             initial_termios: initial_termios,
             key: 0,
+            commands: Vec::<Command>::new(),
             key_available: false,
         };
 
@@ -29,7 +36,7 @@ impl Keyboard {
         if let Some(initial) = self.initial_termios {
             let mut new_term = initial.clone();
             new_term.c_iflag &= !(IXON | ICRNL);
-            new_term.c_lflag &= !(/*ISIG |*/ ECHO | ICANON | IEXTEN);
+            new_term.c_lflag &= !(ISIG | ECHO | ICANON | IEXTEN);
             new_term.c_cc[VMIN] = if blocking {1} else {0};
             new_term.c_cc[VTIME] = 0;
             tcsetattr(STDIN_FD, TCSANOW, &new_term).unwrap();
@@ -37,23 +44,12 @@ impl Keyboard {
     }
 
     pub fn is_key_pressed(&mut self) -> bool {
-        if !self.key_available {
-            let mut buf = [0];
-            let size = stdin().read(&mut buf).unwrap_or(0);
-            if size != 0 {
-                self.key = *buf.last().unwrap();
-                self.key = match self.key {
-                    0x7f => 0x08, // Backspace to ^H
-                    _ => self.key & 0x7f,
-                };
-                self.key_available = true;
-            }
-        }
+        self.consume_input();
         self.key_available
     }
 
     pub fn get_key(&mut self) -> u8 {
-        self.is_key_pressed();
+        self.consume_input();
         self.key_available = false;
         self.key
     }
@@ -62,8 +58,92 @@ impl Keyboard {
         self.key
     }
 
+    pub fn consume_input(&mut self) {
+        let mut buf = [0;100];
+        let size = stdin().read(&mut buf).unwrap_or(0);
+        if size > 0 {
+            self.parse_input(size, &buf);
+        }
+    }
 
+    fn parse_input(&mut self, size: usize, input: &[u8]) {
+        if size == 0 {
+            // No new keys
+        } else if size > 2 && input[0] == 0x1b {
+            // Escape sequences
+            // See 5.4 in the ECMA-48 spec
+            let mut seq = "".to_owned();
+            // Second byte of the CSI
+            seq.push(input[1] as char);
+            let mut i = 2;
+            // Parameter and Intermediate bytes
+            while i < size && (
+                    input[i] & 0xf0 == 0x20 ||
+                    input[i] & 0xf0 == 0x30 ) {
+                seq.push(input[i] as char);
+                i += 1;
+            }
+            // Final byte
+            if i < size {
+                seq.push(input[i] as char);
+                i += 1;
+            }
+            //println!("Escape sequence: {}", seq);
+
+            match seq.as_str() {
+                "OP" => { // F1
+                    self.commands.push(Command::Help);
+                }
+                "OS" => { // F4
+                    self.commands.push(Command::Quit);
+                }
+                "[3~" => {
+                    // "Delete" key mapped to "DEL"
+                    self.key = 0x7f;
+                    self.key_available = true;
+                }
+                "[2~" => {
+                    // "Insert" key mapped to "LINEFEED"
+                    self.key = 0x0a;
+                    self.key_available = true;
+                }
+                "[A" => {
+                    // Up arrow mapped to ^K
+                    self.key = 0x0b;
+                    self.key_available = true;
+                }
+                "[B" => {
+                    // Down arrow mapped to ^J
+                    self.key = 0x0a;
+                    self.key_available = true;
+                }
+                "[C" => {
+                    // Right arrow mapped to ^L
+                    self.key = 0x0c;
+                    self.key_available = true;
+                }
+                "[D" => {
+                    // Left arrow mapped to ^H
+                    self.key = 0x08;
+                    self.key_available = true;
+                }
+                _ => {}
+            }
+            // Parse the rest
+            self.parse_input(size-i, &input[i..]);
+        } else {
+            self.key = input[0];
+            self.key = match self.key {
+                0x7f => 0x08, // Backspace to ^H
+                _ => self.key & 0x7f,
+            };
+            self.key_available = true;
+            // Parse the rest
+            self.parse_input(size-1, &input[1..]);
+        }
+    }
 }
+
 
 impl Drop for Keyboard {
     fn drop(&mut self) {

@@ -9,12 +9,12 @@ mod screen;
 use self::kaypro_machine::KayproMachine;
 use self::floppy_controller::FloppyController;
 use self::screen::Screen;
+use self::keyboard_unix::Command;
 
 // Welcome message
 const WELCOME: &'static str =
 "Kaypro https://github.com/ivanizag/izkaypro
-Emulation of the Kaypro II computer
-Press ctrl-c to return to host";
+Emulation of the Kaypro II computer";
 
 
 fn main() {
@@ -89,35 +89,51 @@ fn main() {
 
     let mut counter: u64 = 1;
     let mut next_signal: u64 = 0;
-    loop {
+    let mut done = false;
+    while !done {
         cpu.execute_instruction(&mut machine);
         counter += 1;
 
+        // IO refresh
         if counter % 2048 == 0 {
+            machine.keyboard.consume_input();
             screen.update(&mut machine);
         }
 
+        if machine.keyboard.commands.len() != 0 {
+            for command in machine.keyboard.commands.iter() {
+                match command {
+                    Command::Quit => {
+                        done = true;
+                    },
+                    Command::Help => {
+                        // TODO
+                    },
+                }
+            }
+            machine.keyboard.commands.clear();
+        }
+
+        // NMI processing
         if machine.floppy_controller.raise_nmi {
             machine.floppy_controller.raise_nmi = false;
             next_signal = counter + 1000;
         }
-
         if next_signal != 0 && counter >= next_signal {
             cpu.signal_nmi();
             next_signal = 0;
         }
-
         if counter < next_signal && cpu.is_halted() {
             cpu.signal_nmi();
             next_signal = 0;
         }
-
         if cpu.is_halted() {
             screen.update(&mut machine);
             println!("HALT instruction that will never be interrupted");
             break;
         }
 
+        // Tracing
         if trace_rom && machine.is_rom_rank(){
             let dma = machine.peek16(0xfc14);
             match cpu.registers().pc() {
