@@ -115,6 +115,14 @@ fn main() {
                         screen.show_status = !screen.show_status;
                         screen.update(&mut machine, true);
                     },
+                    Command::SelectDiskA => {
+                        let path = screen.prompt(& mut machine, "File to load in Drive A");
+                        machine.floppy_controller.load_disk(path.as_str(), false).unwrap();
+                    }
+                    Command::SelectDiskB => {
+                        let path = screen.prompt(& mut machine, "File to load in Drive B");
+                        machine.floppy_controller.load_disk(path.as_str(), true).unwrap();
+                    }
                 }
             }
             machine.keyboard.commands.clear();

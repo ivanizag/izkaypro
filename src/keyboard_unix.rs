@@ -8,6 +8,8 @@ const STDIN_FD: i32 = 0;
 pub enum Command {
     Help,
     Quit,
+    SelectDiskA,
+    SelectDiskB,
     ShowStatus,
 }
 
@@ -60,6 +62,16 @@ impl Keyboard {
         self.key
     }
 
+    pub fn read_line(&mut self) -> String {
+        if let Some(initial) = self.initial_termios {
+            tcsetattr(STDIN_FD, TCSANOW, &initial).unwrap();
+        }
+        let mut buffer = String::new();
+        stdin().read_line(&mut buffer).unwrap();
+        self.setup_host_terminal(false);
+        buffer.trim().to_string()
+    }
+
     pub fn consume_input(&mut self) {
         let mut buf = [0;100];
         let size = stdin().read(&mut buf).unwrap_or(0);
@@ -101,6 +113,12 @@ impl Keyboard {
                 }
                 "OS" => { // F4
                     self.commands.push(Command::Quit);
+                }
+                "[15~" => { // F5
+                    self.commands.push(Command::SelectDiskA);
+                }
+                "[17~" => { // F6
+                    self.commands.push(Command::SelectDiskB);
                 }
                 "[3~" => {
                     // "Delete" key mapped to "DEL"

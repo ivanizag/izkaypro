@@ -1,3 +1,6 @@
+use std::io::{stdout, Write};
+
+
 use super::KayproMachine;
 
 pub struct Screen {
@@ -28,6 +31,26 @@ impl Screen {
             for _ in 0..27 {
                 println!();
             }
+        }
+    }
+
+    pub fn prompt(&mut self, machine: &mut KayproMachine, message: &str) -> String {
+        if self.in_place {
+            print!("\x1b[{}A", 20);
+            println!("//==================================================================================\\\\");
+            println!("||                                                                                  ||");
+            println!("\\\\==================================================================================//");
+            print!("\x1b[{}A", 2);
+            print!("|| {}: ", message);
+            stdout().flush().unwrap();
+            let line = machine.keyboard.read_line();
+            print!("\x1b[{}B", 19);
+            self.update(machine, true);
+            line
+        } else {
+            print!("{}: ", message);
+            stdout().flush().unwrap();
+            machine.keyboard.read_line()
         }
     }
 
