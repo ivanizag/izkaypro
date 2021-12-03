@@ -45,7 +45,7 @@ impl Screen {
 
         let mut disk_status = "========".to_owned();
         if self.show_status && machine.floppy_controller.motor_on {
-            if machine.floppy_controller.disk == 0 {
+            if machine.floppy_controller.drive == 0 {
                 disk_status = " A".to_owned();
             } else {
                 disk_status = " B".to_owned();

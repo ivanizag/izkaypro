@@ -98,9 +98,9 @@ impl KayproMachine {
     fn update_system_bits(&mut self, bits: u8) {
         self.system_bits = bits;
         if bits & SystemBit::DriveA as u8 != 0 {
-            self.floppy_controller.set_disk(0);
+            self.floppy_controller.set_drive(0);
         } else if bits & SystemBit::DriveB as u8 != 0 {
-            self.floppy_controller.set_disk(1);
+            self.floppy_controller.set_drive(1);
         }
 
         let motor_off = bits & SystemBit::MotorsOff as u8 != 0;

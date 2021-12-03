@@ -11,7 +11,7 @@ static DISK_IMAGE_DEFAULT_2: &'static [u8] = include_bytes!("../disks/K-PFILER.B
 
 pub struct FloppyController {
     pub motor_on: bool,
-    pub disk: u8,
+    pub drive: u8,
     track: u8,
     sector: u8,
     pub single_density: bool,
@@ -53,7 +53,7 @@ impl FloppyController {
     pub fn new(trace: bool) -> FloppyController {
         FloppyController {
             motor_on: false,
-            disk: 0,
+            drive: 0,
             track: 0,
             sector: 0,
             single_density: false,
@@ -77,7 +77,7 @@ impl FloppyController {
         }
     }
 
-    pub fn load_disk(&mut self, filename: &str, disk_b: bool) -> Result<()>{
+    pub fn load_disk(&mut self, filename: &str, drive_b: bool) -> Result<()>{
         self.flush_disk();
 
         // Try opening writable, then read only
@@ -112,7 +112,7 @@ impl FloppyController {
             Some(file)
         };
 
-        if disk_b {
+        if drive_b {
             self.file_b = file;
             self.content_b = content;
         } else {
@@ -129,7 +129,7 @@ impl FloppyController {
             return;
         }
 
-        if self.disk == 0 {
+        if self.drive == 0 {
             if let Some(ref mut file) = self.file_a {
                 file.seek(SeekFrom::Start(self.write_min as u64)).unwrap();
                 file.write_all(&self.content_a[self.write_min..=self.write_max]).unwrap();
@@ -154,13 +154,13 @@ impl FloppyController {
         self.single_density = single_density;
     }
 
-    pub fn set_disk(&mut self, disk: u8) {
+    pub fn set_drive(&mut self, drive: u8) {
         self.flush_disk();
-        self.disk = disk;
+        self.drive = drive;
     }
 
     fn content(&mut self) -> &mut Vec<u8> {
-        if self.disk == 0 {
+        if self.drive == 0 {
             &mut self.content_a
         } else {
             &mut self.content_b
@@ -245,7 +245,7 @@ impl FloppyController {
             self.inc_sector();
             self.status = 0;
             self.data_buffer.push(self.track);
-            self.data_buffer.push(self.disk);
+            self.data_buffer.push(0); // Side
             self.data_buffer.push(self.sector);
             self.data_buffer.push(2); // For sector size 512
             self.data_buffer.push(0); // CRC 1
