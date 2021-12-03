@@ -20,7 +20,7 @@ pub enum SystemBit {
     CentronicsReady = 0x08,
     CentronicsStrobe = 0x10,
     SingleDensity = 0x20,
-    Motors = 0x40,
+    MotorsOff = 0x40,
     Bank = 0x80,
 }
 
@@ -67,7 +67,7 @@ pub struct KayproMachine {
     ram: [u8; 65536],
     pub vram: [u8; 4096],
     pub vram_dirty: bool,
-    system_bits: u8,
+    pub system_bits: u8,
 
     trace_io: bool,
     trace_system_bits: bool,
@@ -83,7 +83,7 @@ impl KayproMachine {
             ram: [0; 65536],
             vram: [0; 4096],
             vram_dirty: false,
-            system_bits: SystemBit::Bank as u8,
+            system_bits: SystemBit::Bank as u8 | SystemBit::MotorsOff as u8,
             trace_io: trace_io,
             trace_system_bits: trace_system_bits,
             keyboard: Keyboard::new(),
@@ -102,6 +102,12 @@ impl KayproMachine {
         } else if bits & SystemBit::DriveB as u8 != 0 {
             self.floppy_controller.set_disk(1);
         }
+
+        let motor_off = bits & SystemBit::MotorsOff as u8 != 0;
+        self.floppy_controller.set_motor(!motor_off);
+
+        let single_density = bits & SystemBit::SingleDensity as u8 != 0;
+        self.floppy_controller.set_single_density(single_density);
 
         if self.trace_system_bits {
             print_system_bits(self.system_bits);
@@ -194,7 +200,7 @@ fn print_system_bits(system_bits: u8) {
     if system_bits & SystemBit::CentronicsReady  as u8 != 0 {print!("CentronicsReady ");}
     if system_bits & SystemBit::CentronicsStrobe as u8 != 0 {print!("CentronicsStrobe ");}
     if system_bits & SystemBit::SingleDensity as u8 != 0    {print!("SingleDensity ");}
-    if system_bits & SystemBit::Motors as u8 != 0           {print!("MotorsOff ");}
+    if system_bits & SystemBit::MotorsOff as u8 != 0        {print!("MotorsOff ");}
     if system_bits & SystemBit::Bank as u8 != 0             {print!("ROM ");}
     println!();
 }

@@ -66,7 +66,7 @@ fn main() {
 
     // Init device
     let floppy_controller = FloppyController::new(trace_fdc);
-    let screen = Screen::new(!any_trace);
+    let mut screen = Screen::new(!any_trace);
     let mut machine = KayproMachine::new(floppy_controller,
         trace_io, trace_system_bits);
     let mut cpu = Cpu::new_z80();
@@ -97,17 +97,22 @@ fn main() {
         // IO refresh
         if counter % 2048 == 0 {
             machine.keyboard.consume_input();
-            screen.update(&mut machine);
+            screen.update(&mut machine, false);
         }
 
         if machine.keyboard.commands.len() != 0 {
-            for command in machine.keyboard.commands.iter() {
+            let commands = machine.keyboard.commands.clone();
+            for command in commands {
                 match command {
                     Command::Quit => {
                         done = true;
                     },
                     Command::Help => {
                         // TODO
+                    },
+                    Command::ShowStatus => {
+                        screen.show_status = !screen.show_status;
+                        screen.update(&mut machine, true);
                     },
                 }
             }
@@ -128,7 +133,7 @@ fn main() {
             next_signal = 0;
         }
         if cpu.is_halted() {
-            screen.update(&mut machine);
+            screen.update(&mut machine, true);
             println!("HALT instruction that will never be interrupted");
             break;
         }

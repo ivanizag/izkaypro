@@ -4,9 +4,11 @@ use termios::*;
 
 const STDIN_FD: i32 = 0;
 
+#[derive(Copy, Clone)]
 pub enum Command {
     Help,
     Quit,
+    ShowStatus,
 }
 
 pub struct Keyboard {
@@ -93,6 +95,9 @@ impl Keyboard {
             match seq.as_str() {
                 "OP" => { // F1
                     self.commands.push(Command::Help);
+                }
+                "OQ" => { // F2
+                    self.commands.push(Command::ShowStatus);
                 }
                 "OS" => { // F4
                     self.commands.push(Command::Quit);

@@ -8,11 +8,14 @@ static DISK_IMAGE_DEFAULT: &'static [u8] = include_bytes!("../disks/KPII-149.BIN
 static DISK_IMAGE_DEFAULT_2: &'static [u8] = include_bytes!("../disks/K-PFILER.BIN");
 
 pub struct FloppyController {
-    status: u8,
-    disk: u8,
+    pub motor_on: bool,
+    pub disk: u8,
     track: u8,
     sector: u8,
+    pub single_density: bool,
     data: u8,
+    status: u8,
+
     content_a: Vec<u8>,
     content_b: Vec<u8>,
 
@@ -42,11 +45,14 @@ pub enum FDCStatus {
 impl FloppyController {
     pub fn new(trace: bool) -> FloppyController {
         FloppyController {
-            status: 0,
+            motor_on: false,
             disk: 0,
             track: 0,
             sector: 0,
+            single_density: false,
             data: 0,
+            status: 0,
+
             content_a: DISK_IMAGE_DEFAULT.to_vec(),
             content_b: DISK_IMAGE_DEFAULT_2.to_vec(),
 
@@ -70,6 +76,14 @@ impl FloppyController {
         } else {
             self.content_a = content;
         }
+    }
+
+    pub fn set_motor(&mut self, motor_on: bool) {
+        self.motor_on = motor_on;
+    }
+
+    pub fn set_single_density(&mut self, single_density: bool) {
+        self.single_density = single_density;
     }
 
     pub fn set_disk(&mut self, disk: u8) {
