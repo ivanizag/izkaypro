@@ -7,7 +7,7 @@ const SECTOR_SIZE: usize = 512;
 const DISK_SIZE: usize = TRACK_COUNT * SECTOR_COUNT * SECTOR_SIZE;
 
 static DISK_IMAGE_DEFAULT: &'static [u8] = include_bytes!("../disks/KPII-149.BIN");
-static DISK_IMAGE_DEFAULT_2: &'static [u8] = include_bytes!("../disks/K-PFILER.BIN");
+static DISK_IMAGE_DEFAULT_2: &'static [u8] = include_bytes!("../disks/blank.img");
 
 pub struct FloppyController {
     pub motor_on: bool,
