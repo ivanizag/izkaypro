@@ -1,8 +1,10 @@
-use std::fs::File;
-use std::io::{Read /*, Write*/};
+use std::fs::{File, OpenOptions};
+use std::io::{Read, Write, Seek, SeekFrom, Result};
 
+const TRACK_COUNT: usize = 40;
 const SECTOR_COUNT: usize = 10; // For the DD disk
 const SECTOR_SIZE: usize = 512;
+const DISK_SIZE: usize = TRACK_COUNT * SECTOR_COUNT * SECTOR_SIZE;
 
 static DISK_IMAGE_DEFAULT: &'static [u8] = include_bytes!("../disks/KPII-149.BIN");
 static DISK_IMAGE_DEFAULT_2: &'static [u8] = include_bytes!("../disks/K-PFILER.BIN");
@@ -16,11 +18,16 @@ pub struct FloppyController {
     data: u8,
     status: u8,
 
+    file_a: Option<File>,
     content_a: Vec<u8>,
+
+    file_b: Option<File>,
     content_b: Vec<u8>,
 
     read_index: usize,
     read_last: usize,
+    write_min: usize,
+    write_max: usize,
 
     data_buffer: Vec<u8>,
 
@@ -53,11 +60,15 @@ impl FloppyController {
             data: 0,
             status: 0,
 
+            file_a: None,
             content_a: DISK_IMAGE_DEFAULT.to_vec(),
+            file_b: None,
             content_b: DISK_IMAGE_DEFAULT_2.to_vec(),
 
             read_index: 0,
             read_last: 0,
+            write_min: DISK_SIZE,
+            write_max: 0,
 
             data_buffer: Vec::new(),
 
@@ -66,19 +77,76 @@ impl FloppyController {
         }
     }
 
-    pub fn load_disk(&mut self, filename: &str, disk_b: bool) {
-        // Load the file contents in content_a
-        let mut file = File::open(filename).unwrap();
+    pub fn load_disk(&mut self, filename: &str, disk_b: bool) -> Result<()>{
+        self.flush_disk();
+
+        // Try opening writable, then read only
+        let (mut file, readonly) = match OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(filename)
+            {
+                Ok(file) => (file, false),
+                _ => {
+                    // Try opening read-only
+                    match OpenOptions::new()
+                        .read(true)
+                        .open(filename)
+                        {
+                            Ok(file) => (file, true),
+                            Err(err) => {
+                                return Err(err);
+                            }
+                        }
+                }
+            };
+
+        // Load content
         let mut content = Vec::new();
         file.read_to_end(&mut content).unwrap();
+
+        // Store the file descriptor on writable files
+        let file = if readonly {
+            None
+        } else {
+            Some(file)
+        };
+
         if disk_b {
+            self.file_b = file;
             self.content_b = content;
         } else {
+            self.file_a = file;
             self.content_a = content;
         }
+
+        Ok(())
+    }
+
+    pub fn flush_disk(&mut self) {
+        if self.write_max < self.write_min {
+            // nothing to write
+            return;
+        }
+
+        if self.disk == 0 {
+            if let Some(ref mut file) = self.file_a {
+                file.seek(SeekFrom::Start(self.write_min as u64)).unwrap();
+                file.write_all(&self.content_a[self.write_min..=self.write_max]).unwrap();
+            }
+        } else {
+            if let Some(ref mut file) = self.file_b {
+                file.seek(SeekFrom::Start(self.write_min as u64)).unwrap();
+                file.write_all(&self.content_b[self.write_min..=self.write_max]).unwrap();
+            }
+        }
+
+        self.write_max = 0;
+        self.write_min = DISK_SIZE;
     }
 
     pub fn set_motor(&mut self, motor_on: bool) {
+        self.flush_disk();
         self.motor_on = motor_on;
     }
 
@@ -87,6 +155,7 @@ impl FloppyController {
     }
 
     pub fn set_disk(&mut self, disk: u8) {
+        self.flush_disk();
         self.disk = disk;
     }
 
@@ -106,6 +175,8 @@ impl FloppyController {
     }
 
     pub fn put_command(&mut self, command: u8) {
+        self.flush_disk();
+
         if (command & 0xf0) == 0x00 {
             // RESTORE command, type I
             // 0000_hVrr
@@ -230,17 +301,28 @@ impl FloppyController {
         self.sector
     }
 
+    fn write_byte(&mut self, value: u8) {
+        let index = self.read_index;
+        self.content()[index] = value;
+        if index < self.write_min {
+            self.write_min = index;
+        }
+        if index > self.write_max {
+            self.write_max = index;
+        }
+    }
+
     pub fn put_data(&mut self, value: u8) {
         self.data = value;
 
         if self.read_index < self.read_last {
             // Store byte
-            let read_index = self.read_index;
-            self.content()[read_index] = self.data;
+            self.write_byte(self.data);
             self.read_index += 1;
             self.raise_nmi = true;
             if self.read_index == self.read_last {
                 // We are done writing
+                self.flush_disk();
                 if self.trace {
                     println!("FDC: Set data completed ${:02x} {}-{}-{}", self.data, self.read_index, self.read_last, self.sector);
                 }

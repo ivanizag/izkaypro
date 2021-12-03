@@ -75,12 +75,12 @@ fn main() {
     // Load disk images
     if let Some(disk_a) = disk_a {
         if  disk_a != "$" {
-            machine.floppy_controller.load_disk(disk_a, false);
+            machine.floppy_controller.load_disk(disk_a, false).unwrap();
         }
     }
     if let Some(disk_b) = disk_b {
         println!("B: {}", disk_b);
-        machine.floppy_controller.load_disk(disk_b, true);
+        machine.floppy_controller.load_disk(disk_b, true).unwrap();
     }
 
     // Start the cpu
@@ -105,6 +105,7 @@ fn main() {
             for command in commands {
                 match command {
                     Command::Quit => {
+                        machine.floppy_controller.flush_disk();
                         done = true;
                     },
                     Command::Help => {
