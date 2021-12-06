@@ -36,6 +36,23 @@ impl Screen {
         }
     }
 
+    pub fn message(&mut self, machine: &mut KayproMachine, message:  &str) {
+        if self.in_place {
+            print!("\x1b[{}A", 14);
+            println!("//==================================================================================\\\\");
+            println!("||                                                                                  ||");
+            println!("\\\\================================================ Press enter to continue =========//");
+            print!("\x1b[{}A", 2);
+            print!("|| {} ", message);
+            stdout().flush().unwrap();
+            machine.keyboard.read_line();
+            print!("\x1b[{}B", 13);
+            self.update(machine, true);
+        } else {
+            print!("{}: ", message);
+        }
+    }
+
     pub fn prompt(&mut self, machine: &mut KayproMachine, message: &str) -> String {
         if self.in_place {
             print!("\x1b[{}A", 20);

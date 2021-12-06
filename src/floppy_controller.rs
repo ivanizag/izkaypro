@@ -107,7 +107,7 @@ impl FloppyController {
 
         // Load content
         let mut content = Vec::new();
-        file.read_to_end(&mut content).unwrap();
+        file.read_to_end(&mut content)?;
 
         // Store the file descriptor on writable files
         let file = if readonly {

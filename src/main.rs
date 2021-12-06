@@ -75,12 +75,18 @@ fn main() {
     // Load disk images
     if let Some(disk_a) = disk_a {
         if  disk_a != "$" {
-            machine.floppy_controller.load_disk(disk_a, false).unwrap();
+            if let Err(err) = machine.floppy_controller.load_disk(disk_a, false) {
+                println!("Error loading file '{}': {}", disk_a, err);
+                return;
+            }
         }
     }
     if let Some(disk_b) = disk_b {
         println!("B: {}", disk_b);
-        machine.floppy_controller.load_disk(disk_b, true).unwrap();
+        if let Err(err) = machine.floppy_controller.load_disk(disk_b, true) {
+            println!("Error loading file '{}': {}", disk_b, err);
+            return;
+        }
     }
 
     // Start the cpu
@@ -117,12 +123,18 @@ fn main() {
                         screen.update(&mut machine, true);
                     },
                     Command::SelectDiskA => {
-                        let path = screen.prompt(& mut machine, "File to load in Drive A");
-                        machine.floppy_controller.load_disk(path.as_str(), false).unwrap();
+                        let path = screen.prompt(&mut machine, "File to load in Drive A");
+                        let res = machine.floppy_controller.load_disk(path.as_str(), false);
+                        if let Err(err) = res {
+                            screen.message(&mut machine, &err.to_string())
+                        }
                     }
                     Command::SelectDiskB => {
                         let path = screen.prompt(& mut machine, "File to load in Drive B");
-                        machine.floppy_controller.load_disk(path.as_str(), true).unwrap();
+                        let res = machine.floppy_controller.load_disk(path.as_str(), true);
+                        if let Err(err) = res {
+                            screen.message(&mut machine, &err.to_string())
+                        }
                     }
                 }
             }
