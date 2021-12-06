@@ -116,11 +116,12 @@ impl Screen {
         }
         println!("||        +----------------------------------------------------------------+        ||");
         println!("||        |  izkaypro: Kaypro II emulator for console terminals            |        ||");
-        println!("||        |                                                                |        ||");
-        println!("||        |  F1: Show/hide help                                            |        ||");
-        println!("||        |  F4: Quit the emulator                                         |        ||");
-        println!("||        |  F5: Select file image for drive A:                            |        ||");
-        println!("||        |  F6: Select file image for drive B:                            |        ||");
+        println!("||        |----------------------------------------------------------------|        ||");
+        println!("||        |  F1: Show/hide help           | Host keys to Kaypro keys:      |        ||");
+        println!("||        |  F2: Show/hide disk status    |  Delete to DEL                 |        ||");
+        println!("||        |  F4: Quit the emulator        |  Insert to LINEFEED            |        ||");
+        println!("||        |  F5: Select file for drive A: |                                |        ||");
+        println!("||        |  F6: Select file for drive B: |                                |        ||");
         println!("||        +----------------------------------------------------------------+        ||");
         println!("||        |  Loaded images:                                                |        ||");
         println!("||        |  A: {:58} |        ||", machine.floppy_controller.drive_info(false));
