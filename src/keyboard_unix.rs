@@ -1,4 +1,6 @@
 use std::io::{Read, stdin};
+use std::thread;
+use std::time::Duration;
 
 use termios::*;
 
@@ -49,6 +51,10 @@ impl Keyboard {
 
     pub fn is_key_pressed(&mut self) -> bool {
         self.consume_input();
+        if !self.key_available {
+            // Avoid 100% CPU usage waiting for input.
+            thread::sleep(Duration::from_nanos(100));
+        }
         self.key_available
     }
 
