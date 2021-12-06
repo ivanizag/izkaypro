@@ -7,6 +7,7 @@ pub struct Screen {
     in_place: bool,
     last_system_bits: u8,
     pub show_status: bool,
+    pub show_help: bool,
 }
 
 const CONTROL_CHARS: [char; 32] = [
@@ -23,6 +24,7 @@ impl Screen {
             in_place: in_place,
             last_system_bits: 0,
             show_status: false,
+            show_help: false,
         }
     }
 
@@ -101,8 +103,36 @@ impl Screen {
         }
         println!("\\\\======{}=================================== F1 for help ==== F4 to exit ====//", disk_status);
         //println!("\\\\==================================================================================//");
+
+        if self.show_help {
+            self.update_help(machine)
+        }
         machine.vram_dirty = false;
     }
+
+    fn update_help (&mut self, machine: &KayproMachine) {
+        if self.in_place {
+            print!("\x1b[{}A", 21);
+        }
+        println!("||        +----------------------------------------------------------------+        ||");
+        println!("||        |  izkaypro: Kaypro II emulator for console terminals            |        ||");
+        println!("||        |                                                                |        ||");
+        println!("||        |  F1: Show/hide help                                            |        ||");
+        println!("||        |  F4: Quit the emulator                                         |        ||");
+        println!("||        |  F5: Select file image for drive A:                            |        ||");
+        println!("||        |  F6: Select file image for drive B:                            |        ||");
+        println!("||        +----------------------------------------------------------------+        ||");
+        println!("||        |  Loaded images:                                                |        ||");
+        println!("||        |  A: {:58} |        ||", machine.floppy_controller.drive_info(false));
+        println!("||        |  B: {:58} |        ||", machine.floppy_controller.drive_info(true));
+        println!("||        +----------------------------------------------------------------+        ||");
+
+        if self.in_place {
+            print!("\x1b[{}B", 21-8);
+        }
+    }
+
+
 }
 
 fn translate_char(code: u8) -> char {

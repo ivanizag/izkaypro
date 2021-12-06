@@ -109,7 +109,8 @@ fn main() {
                         done = true;
                     },
                     Command::Help => {
-                        // TODO
+                        screen.show_help = !screen.show_help;
+                        screen.update(&mut machine, true);
                     },
                     Command::ShowStatus => {
                         screen.show_status = !screen.show_status;

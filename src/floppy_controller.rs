@@ -6,8 +6,8 @@ const SECTOR_COUNT: usize = 10; // For the DD disk
 const SECTOR_SIZE: usize = 512;
 const DISK_SIZE: usize = TRACK_COUNT * SECTOR_COUNT * SECTOR_SIZE;
 
-static DISK_IMAGE_DEFAULT: &'static [u8] = include_bytes!("../disks/KPII-149.BIN");
-static DISK_IMAGE_DEFAULT_2: &'static [u8] = include_bytes!("../disks/blank.img");
+static DISK_CPM22: &'static [u8] = include_bytes!("../disks/KPII-149.BIN");
+static DISK_BLANK: &'static [u8] = include_bytes!("../disks/blank.img");
 
 pub struct FloppyController {
     pub motor_on: bool,
@@ -19,9 +19,11 @@ pub struct FloppyController {
     status: u8,
 
     file_a: Option<File>,
+    name_a: String,
     content_a: Vec<u8>,
 
     file_b: Option<File>,
+    name_b: String,
     content_b: Vec<u8>,
 
     read_index: usize,
@@ -61,9 +63,11 @@ impl FloppyController {
             status: 0,
 
             file_a: None,
-            content_a: DISK_IMAGE_DEFAULT.to_vec(),
+            name_a: "CPM/2.2 embedded".to_owned(),
+            content_a: DISK_CPM22.to_vec(),
             file_b: None,
-            content_b: DISK_IMAGE_DEFAULT_2.to_vec(),
+            name_b: "Blank disk embedded".to_owned(),
+            content_b: DISK_BLANK.to_vec(),
 
             read_index: 0,
             read_last: 0,
@@ -114,9 +118,11 @@ impl FloppyController {
 
         if drive_b {
             self.file_b = file;
+            self.name_b = filename.to_owned();
             self.content_b = content;
         } else {
             self.file_a = file;
+            self.name_a = filename.to_owned();
             self.content_a = content;
         }
 
@@ -143,6 +149,20 @@ impl FloppyController {
 
         self.write_max = 0;
         self.write_min = DISK_SIZE;
+    }
+
+    pub fn drive_info(&self, drive_b: bool) -> String {
+        if drive_b {
+            self.name_b.clone() + match self.file_b {
+                Some(_) => " (persistent)",
+                _ => " (transient)"
+            }
+        } else {
+            self.name_a.clone() + match self.file_a {
+                Some(_) => " (persistent)",
+                _ => " (transient)"
+            }
+        }
     }
 
     pub fn set_motor(&mut self, motor_on: bool) {
