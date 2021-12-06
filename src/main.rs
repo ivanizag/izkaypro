@@ -132,7 +132,7 @@ fn main() {
         // NMI processing
         if machine.floppy_controller.raise_nmi {
             machine.floppy_controller.raise_nmi = false;
-            next_signal = counter + 1000;
+            next_signal = counter + 10_000_000;
         }
         if next_signal != 0 && counter >= next_signal {
             cpu.signal_nmi();
