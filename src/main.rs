@@ -45,9 +45,13 @@ fn main() {
             .long("system-bits")
             .help("Traces changes to the system bits values"))
         .arg(Arg::with_name("rom_trace")
-            .short("ro")
+            .short("r")
             .long("rom-trace")
             .help("Traces calls to the ROM entrypoints"))
+        .arg(Arg::with_name("bdos_trace")
+            .short("b")
+            .long("bdos-trace")
+            .help("Traces calls to the CP/M BDOS entrypoints"))
         .get_matches();
 
     let disk_a = matches.value_of("DISKA");
@@ -57,11 +61,13 @@ fn main() {
     let trace_fdc = matches.is_present("fdc_trace");
     let trace_system_bits = matches.is_present("system_bits");
     let trace_rom = matches.is_present("rom_trace");
+    let trace_bdos = matches.is_present("bdos_trace");
 
     let any_trace = trace_io
         || trace_cpu
         || trace_fdc
         || trace_rom
+        || trace_bdos
         || trace_system_bits;
 
     // Init device
@@ -182,8 +188,37 @@ fn main() {
                 _ => {}
             }
         }
+
+        if trace_bdos && !machine.is_rom_rank()
+                && cpu.registers().pc() == 0x0005 {
+            let command = cpu.registers().get8(Reg8::C);
+            let args = cpu.registers().get16(Reg16::DE);
+
+            let name = if command < BDOS_COMMAND_NAMES.len() as u8 {
+                BDOS_COMMAND_NAMES[command as usize]
+            } else {
+                "unknown"
+            };
+
+            print!("BDOS command {}: {}({:04x})\n", command, name, args);
+        }
     }
 }
 
-
-
+const BDOS_COMMAND_NAMES: [&'static str; 50] = [
+    // 0
+    "P_TERMCPM", "C_READ", "C_WRITE", "A_READ", "A_WRITE",
+    "L_WRITE", "C_RAWIO", "A_STATIN", "A_STATOUT", "C_WRITESTR",
+    // 10
+    "C_READSTR", "C_STAT", "S_BDOSVER", "DRV_ALLRESET", "DRV_SET",
+    "F_OPEN", "F_CLOSE", "F_SFIRST", "F_SNEXT", "F_DELETE",
+    // 20
+    "F_READ", "F_WRITE", "F_MAKE", "F_RENAME", "DRV_LOGINVEC",
+    "DRV_GET", "F_DMAOFF", "DRV_ALLOCVEC", "DRV_SETRO", "DRV_ROVEC",
+    // 30
+    "F_ATTRIB", "DRV_DPB", "F_USERNUM", "F_READRAND", "F_WRITERAND",
+    "F_SIZE", "F_RANDREC", "DRV_RESET", "*", "",
+    // 40
+    "F_WRITEZ", "", "", "", "",
+    "F_ERRMODE", "", "", "", "",
+    ];
