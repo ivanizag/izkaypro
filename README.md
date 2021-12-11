@@ -62,7 +62,7 @@ Emulation of the Kaypro II computer
 ### Usage with external images
 You can provide up two disk images as binary files to use as A: and B: drives. If only an image is provided, it will be the A: disk, B: will be a blank disk.
 
-The images have to be raw binary images of single sided disks. The size must be 204800 bytes. Files with Teledisk (.TD0) or ImageDisk (.IMD) formats must be converted to raw with [ImageDisk](http://dunfield.classiccmp.org/img/index.htm).
+The images have to be raw binary images of single sided disks. The size must be 204800 bytes. See [disk images](doc/disk_images.md).
 
 ```
 casa@servidor:~/$ ./izkaypro disks/cpmish.img disks/WordStar33.img 
