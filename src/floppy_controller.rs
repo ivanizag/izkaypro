@@ -6,7 +6,7 @@ const SECTOR_COUNT: usize = 10; // For the DD disk
 const SECTOR_SIZE: usize = 512;
 const DISK_SIZE: usize = TRACK_COUNT * SECTOR_COUNT * SECTOR_SIZE;
 
-static DISK_CPM22: &'static [u8] = include_bytes!("../disks/KPII-149.BIN");
+static DISK_CPM22: &'static [u8] = include_bytes!("../disks/cpm22-bios149.img");
 static DISK_BLANK: &'static [u8] = include_bytes!("../disks/blank.img");
 
 pub struct FloppyController {
