@@ -88,7 +88,6 @@ fn main() {
         }
     }
     if let Some(disk_b) = disk_b {
-        println!("B: {}", disk_b);
         if let Err(err) = machine.floppy_controller.load_disk(disk_b, true) {
             println!("Error loading file '{}': {}", disk_b, err);
             return;
