@@ -15,7 +15,7 @@ It's a typical CP/M computer of the early 80s, built on a metal case with standa
 - Zilog Z80 at 2.5 MHz
 - 64 KB of main RAM
 - 2 KB of ROM
-- 2 kB of video RAM
+- 2 KB of video RAM
 - 80*24 text mode (no graphics capabilities)
 - Two single side double density drives with 195kb capacity
 - A serial port (not emulated by izkaypro)
