@@ -105,7 +105,7 @@ Press F1 to get additional help:
 ||                                                                                  ||
 || KAYPRO II 64k CP/M vers 2.2                                                      ||
 ||                                                                                  ||
-|| A>dir b:                                                                         ||
+|| A>_                                                                              ||
 ||        +----------------------------------------------------------------+        ||
 ||        |  izkaypro: Kaypro II emulator for console terminals            |        ||
 ||        |----------------------------------------------------------------|        ||
@@ -114,12 +114,12 @@ Press F1 to get additional help:
 ||        |  F4: Quit the emulator        |  Insert to LINEFEED            |        ||
 ||        |  F5: Select file for drive A: |                                |        ||
 ||        |  F6: Select file for drive B: |                                |        ||
+||        |  F8: Toggle CPU trace         |                                |        ||
 ||        +----------------------------------------------------------------+        ||
 ||        |  Loaded images:                                                |        ||
-||        |  A: disks/cpm22-bios149.img (persistent)                       |        ||
-||        |  B: disks/WordStar33.img (persistent)                          |        ||
+||        |  A: CPM/2.2 embedded (transient)                               |        ||
+||        |  B: Blank disk embedded (transient)                            |        ||
 ||        +----------------------------------------------------------------+        ||
-||                                                                                  ||
 ||                                                                                  ||
 ||                                                                                  ||
 ||                                                                                  ||

@@ -56,7 +56,7 @@ fn main() {
 
     let disk_a = matches.value_of("DISKA");
     let disk_b = matches.value_of("DISKB");
-    let trace_cpu = matches.is_present("cpu_trace");
+    let mut trace_cpu = matches.is_present("cpu_trace");
     let trace_io = matches.is_present("io_trace");
     let trace_fdc = matches.is_present("fdc_trace");
     let trace_system_bits = matches.is_present("system_bits");
@@ -121,11 +121,9 @@ fn main() {
                     },
                     Command::Help => {
                         screen.show_help = !screen.show_help;
-                        screen.update(&mut machine, true);
                     },
                     Command::ShowStatus => {
                         screen.show_status = !screen.show_status;
-                        screen.update(&mut machine, true);
                     },
                     Command::SelectDiskA => {
                         let path = screen.prompt(&mut machine, "File to load in Drive A");
@@ -141,8 +139,14 @@ fn main() {
                             screen.message(&mut machine, &err.to_string())
                         }
                     }
+                    Command::TraceCPU => {
+                        trace_cpu = !trace_cpu;
+                        cpu.set_trace(trace_cpu);
+                        screen.set_in_place(!trace_cpu && !any_trace);
+                    },
                 }
             }
+            screen.update(&mut machine, true);
             machine.keyboard.commands.clear();
         }
 

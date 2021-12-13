@@ -13,6 +13,7 @@ pub enum Command {
     SelectDiskA,
     SelectDiskB,
     ShowStatus,
+    TraceCPU,
 }
 
 pub struct Keyboard {
@@ -110,6 +111,7 @@ impl Keyboard {
             }
             //println!("Escape sequence: {}", seq);
 
+            // Execute "showkey -a" to find the key codes
             match seq.as_str() {
                 "OP" => { // F1
                     self.commands.push(Command::Help);
@@ -125,6 +127,9 @@ impl Keyboard {
                 }
                 "[17~" => { // F6
                     self.commands.push(Command::SelectDiskB);
+                }
+                "[19~" => { // F8
+                    self.commands.push(Command::TraceCPU);
                 }
                 "[3~" => {
                     // "Delete" key mapped to "DEL"

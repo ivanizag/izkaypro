@@ -36,6 +36,10 @@ impl Screen {
         }
     }
 
+    pub fn set_in_place(&mut self, in_place: bool) {
+        self.in_place = in_place;
+    }
+
     pub fn message(&mut self, machine: &mut KayproMachine, message:  &str) {
         if self.in_place {
             print!("\x1b[{}A", 14);
@@ -139,6 +143,7 @@ impl Screen {
         println!("||        |  F4: Quit the emulator        |  Insert to LINEFEED            |        ||");
         println!("||        |  F5: Select file for drive A: |                                |        ||");
         println!("||        |  F6: Select file for drive B: |                                |        ||");
+        println!("||        |  F8: Toggle CPU trace         |                                |        ||");
         println!("||        +----------------------------------------------------------------+        ||");
         println!("||        |  Loaded images:                                                |        ||");
         println!("||        |  A: {:58} |        ||", machine.floppy_controller.drive_info(false));
@@ -146,7 +151,7 @@ impl Screen {
         println!("||        +----------------------------------------------------------------+        ||");
 
         if self.in_place {
-            print!("\x1b[{}B", 21-8);
+            print!("\x1b[{}B", 21-7);
         }
     }
 
