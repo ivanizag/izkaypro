@@ -175,7 +175,7 @@ impl Machine for KayproMachine {
         let value = match port {
 
             0x05 => self.keyboard.get_key(),
-            0x07 => if self.keyboard.is_key_pressed() {0x01} else {0x00},
+            0x07 => (if self.keyboard.is_key_pressed() {1} else {0}) + 0x04,
 
             // Floppy controller
             0x10 => self.floppy_controller.get_status(),
@@ -185,6 +185,7 @@ impl Machine for KayproMachine {
             0x1c => self.system_bits,
             _ => 0xca,
         }; 
+
         if self.trace_io && port != 0x13 && port != 0x07 && port != 0x1c {
             println!("IN(0x{:02x} '{}') = 0x{:02x}", port, IO_PORT_NAMES[port as usize], value);
         }
