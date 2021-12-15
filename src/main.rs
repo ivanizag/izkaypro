@@ -195,15 +195,16 @@ fn main() {
         if trace_bdos && !machine.is_rom_rank()
                 && cpu.registers().pc() == 0x0005 {
             let command = cpu.registers().get8(Reg8::C);
-            let args = cpu.registers().get16(Reg16::DE);
+            if command != 0x06 /*C_RAWIO*/ {
+                let args = cpu.registers().get16(Reg16::DE);
+                let name = if command < BDOS_COMMAND_NAMES.len() as u8 {
+                    BDOS_COMMAND_NAMES[command as usize]
+                } else {
+                    "unknown"
+                };
 
-            let name = if command < BDOS_COMMAND_NAMES.len() as u8 {
-                BDOS_COMMAND_NAMES[command as usize]
-            } else {
-                "unknown"
-            };
-
-            print!("BDOS command {}: {}({:04x})\n", command, name, args);
+                print!("BDOS command {}: {}({:04x})\n", command, name, args);
+            }
         }
     }
 }
