@@ -44,7 +44,7 @@ pub enum FDCStatus {
     _NotReady = 0x01,
     _WriteProtected = 0x02,
     _WriteFault = 0x04,
-    _RecorddNotFound = 0x08,
+    SeekErrorOrRecordNotFound = 0x08,
     _CRCError = 0x10,
     LostDataOrTrack0 = 0x20,
     _DataRequest = 0x40,
@@ -216,10 +216,14 @@ impl FloppyController {
             if self.trace {
                 println!("FDC: Seek track {}", track);
             }
-            self.track = track;
-            self.status = 0;
-            self.raise_nmi = true;
-        
+            if track < TRACK_COUNT as u8 {
+                self.track = track;
+                self.status = 0;
+                self.raise_nmi = true;
+            } else {
+                self.status = FDCStatus::SeekErrorOrRecordNotFound as u8;
+                self.raise_nmi = true;
+            }
         } else if (command & 0xe0) == 0x80 {
             // READ SECTOR command, type II
             // 100mFEFx
@@ -242,7 +246,7 @@ impl FloppyController {
             // WRITE SECTOR command, type II
             // 101mFEFa
             if command & 0x10 != 0 {
-                panic!("Multiple sector reads not supported")
+                panic!("Multiple sector writes not supported")
             }
             if command & 0x01 != 0 {
                 panic!("Delete data mark not supported")
@@ -349,7 +353,6 @@ impl FloppyController {
                 self.status = 0;
                 self.read_index = 0;
                 self.read_last = 0;
-                self.sector += 1;
             }
         }
 
@@ -380,6 +383,9 @@ impl FloppyController {
             self.read_last = 0;
             self.data = 0;
             self.sector += 1;
+            if self.sector == SECTOR_COUNT as u8 {
+                self.sector = 0;
+            }
             self.raise_nmi = true;
         }
         //if self.trace {
