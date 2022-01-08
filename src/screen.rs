@@ -1,6 +1,4 @@
 use std::io::{stdout, Write};
-
-
 use super::KayproMachine;
 
 pub struct Screen {
@@ -97,9 +95,9 @@ impl Screen {
                 disk_status = " B".to_owned();
             }
             if machine.floppy_controller.single_density {
-                disk_status += " SSSD ";
+                disk_status += " SD ";
             } else {
-                disk_status += " SSDD ";
+                disk_status += " DD ";
             }
         }
 
@@ -146,8 +144,8 @@ impl Screen {
         println!("||        |  F8: Toggle CPU trace         |                                |        ||");
         println!("||        +----------------------------------------------------------------+        ||");
         println!("||        |  Loaded images:                                                |        ||");
-        println!("||        |  A: {:58} |        ||", machine.floppy_controller.drive_info(false));
-        println!("||        |  B: {:58} |        ||", machine.floppy_controller.drive_info(true));
+        println!("||        |  A: {:58} |        ||", machine.floppy_controller.media_a().info());
+        println!("||        |  B: {:58} |        ||", machine.floppy_controller.media_b().info());
         println!("||        +----------------------------------------------------------------+        ||");
 
         if self.in_place {

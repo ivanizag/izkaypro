@@ -1,38 +1,29 @@
-use std::fs::{File, OpenOptions};
-use std::io::{Read, Write, Seek, SeekFrom, Result};
-
-const TRACK_COUNT: usize = 40;
-const SECTOR_COUNT: usize = 10; // For the DD disk
-const SECTOR_SIZE: usize = 512;
-const DISK_SIZE: usize = TRACK_COUNT * SECTOR_COUNT * SECTOR_SIZE;
+use super::media::*;
 
 static DISK_CPM22: &'static [u8] = include_bytes!("../disks/cpm22-bios149.img");
 static DISK_BLANK: &'static [u8] = include_bytes!("../disks/blank.img");
 
+pub enum Drive {
+    A = 0,
+    B = 1,
+}
+
 pub struct FloppyController {
     pub motor_on: bool,
     pub drive: u8,
+    side_2: bool,
     track: u8,
     sector: u8,
     pub single_density: bool,
     data: u8,
     status: u8,
 
-    file_a: Option<File>,
-    name_a: String,
-    content_a: Vec<u8>,
-
-    file_b: Option<File>,
-    name_b: String,
-    content_b: Vec<u8>,
+    media: [Media ;2],
 
     read_index: usize,
     read_last: usize,
-    write_min: usize,
-    write_max: usize,
 
     data_buffer: Vec<u8>,
-
 
     pub raise_nmi: bool,
     pub trace: bool
@@ -56,23 +47,33 @@ impl FloppyController {
         FloppyController {
             motor_on: false,
             drive: 0,
+            side_2: false,
             track: 0,
             sector: 0,
             single_density: false,
             data: 0,
             status: 0,
-
-            file_a: None,
-            name_a: "CPM/2.2 embedded".to_owned(),
-            content_a: DISK_CPM22.to_vec(),
-            file_b: None,
-            name_b: "Blank disk embedded".to_owned(),
-            content_b: DISK_BLANK.to_vec(),
+            media: [
+                Media {
+                    file: None,
+                    name: "CPM/2.2 embedded".to_owned(),
+                    content: DISK_CPM22.to_vec(),
+                    format: MediaFormat::SSDD,
+                    write_min: usize::MAX,
+                    write_max: 0,
+                },
+                Media {
+                    file: None,
+                    name: "Blank disk embedded".to_owned(),
+                    content: DISK_BLANK.to_vec(),
+                    format: MediaFormat::SSDD,
+                    write_min: usize::MAX,
+                    write_max: 0,
+                },
+            ],
 
             read_index: 0,
             read_last: 0,
-            write_min: DISK_SIZE,
-            write_max: 0,
 
             data_buffer: Vec::new(),
 
@@ -81,92 +82,28 @@ impl FloppyController {
         }
     }
 
-    pub fn load_disk(&mut self, filename: &str, drive_b: bool) -> Result<()>{
-        self.flush_disk();
-
-        // Try opening writable, then read only
-        let (mut file, readonly) = match OpenOptions::new()
-            .read(true)
-            .write(true)
-            .open(filename)
-            {
-                Ok(file) => (file, false),
-                _ => {
-                    // Try opening read-only
-                    match OpenOptions::new()
-                        .read(true)
-                        .open(filename)
-                        {
-                            Ok(file) => (file, true),
-                            Err(err) => {
-                                return Err(err);
-                            }
-                        }
-                }
-            };
-
-        // Load content
-        let mut content = Vec::new();
-        file.read_to_end(&mut content)?;
-
-        // Store the file descriptor on writable files
-        let file = if readonly {
-            None
-        } else {
-            Some(file)
-        };
-
-        if drive_b {
-            self.file_b = file;
-            self.name_b = filename.to_owned();
-            self.content_b = content;
-        } else {
-            self.file_a = file;
-            self.name_a = filename.to_owned();
-            self.content_a = content;
-        }
-
-        Ok(())
+    pub fn media_a(&self) -> &Media {
+        &self.media[Drive::A as usize]
     }
 
-    pub fn flush_disk(&mut self) {
-        if self.write_max < self.write_min {
-            // nothing to write
-            return;
-        }
-
-        if self.drive == 0 {
-            if let Some(ref mut file) = self.file_a {
-                file.seek(SeekFrom::Start(self.write_min as u64)).unwrap();
-                file.write_all(&self.content_a[self.write_min..=self.write_max]).unwrap();
-            }
-        } else {
-            if let Some(ref mut file) = self.file_b {
-                file.seek(SeekFrom::Start(self.write_min as u64)).unwrap();
-                file.write_all(&self.content_b[self.write_min..=self.write_max]).unwrap();
-            }
-        }
-
-        self.write_max = 0;
-        self.write_min = DISK_SIZE;
+    pub fn media_b(&self) -> &Media {
+        &self.media[Drive::B as usize]
     }
 
-    pub fn drive_info(&self, drive_b: bool) -> String {
-        if drive_b {
-            self.name_b.clone() + match self.file_b {
-                Some(_) => " (persistent)",
-                _ => " (transient)"
-            }
-        } else {
-            self.name_a.clone() + match self.file_a {
-                Some(_) => " (persistent)",
-                _ => " (transient)"
-            }
-        }
+    pub fn media_a_mut(&mut self) -> &mut Media {
+        &mut self.media[Drive::A as usize]
+    }
+
+    pub fn media_b_mut(&mut self) -> &mut Media {
+        &mut self.media[Drive::B as usize]
+    }
+
+    pub fn media_selected(&mut self) -> &mut Media {
+        &mut self.media[self.drive as usize]
     }
 
     pub fn set_motor(&mut self, motor_on: bool) {
-        self.flush_disk();
+        self.media_selected().flush_disk();
         self.motor_on = motor_on;
     }
 
@@ -174,28 +111,17 @@ impl FloppyController {
         self.single_density = single_density;
     }
 
+    pub fn set_side(&mut self, side_2: bool) {
+        self.side_2 = side_2;
+    }
+
     pub fn set_drive(&mut self, drive: u8) {
-        self.flush_disk();
+        self.media_selected().flush_disk();
         self.drive = drive;
     }
 
-    fn content(&mut self) -> &mut Vec<u8> {
-        if self.drive == 0 {
-            &mut self.content_a
-        } else {
-            &mut self.content_b
-        }
-    }
-
-    fn inc_sector(&mut self) {
-        self.sector += 1;
-        if self.sector == SECTOR_COUNT as u8 {
-            self.sector = 0;
-        }
-    }
-
     pub fn put_command(&mut self, command: u8) {
-        self.flush_disk();
+        self.media_selected().flush_disk();
 
         if (command & 0xf0) == 0x00 {
             // RESTORE command, type I
@@ -216,7 +142,7 @@ impl FloppyController {
             if self.trace {
                 println!("FDC: Seek track {}", track);
             }
-            if track < TRACK_COUNT as u8 {
+            if self.media_selected().is_valid_track(track) {
                 self.track = track;
                 self.status = 0;
                 self.raise_nmi = true;
@@ -231,13 +157,17 @@ impl FloppyController {
                 panic!("Multiple sector reads not supported")
             }
             if self.trace {
-                println!("FDC: Read sector (T:{}, S:{})", self.track, self.sector);
+                println!("FDC: Read sector (S:{}, T:{}, S:{})", self.side_2, self.track, self.sector);
             }
 
-            self.read_index = (self.track as usize * SECTOR_COUNT + self.sector as usize) * SECTOR_SIZE;
-            self.read_last = self.read_index + SECTOR_SIZE;
-            let read_index = self.read_index;
-            self.data = self.content()[read_index];
+            let side_2 = self.side_2;
+            let track = self.track;
+            let sector = self.sector;
+            let (index, last) =  self.media_selected().sector_index(side_2, track, sector);
+            self.read_index = index;
+            self.read_last = last;
+
+            self.data = self.media_selected().read_byte(index);
             self.read_index += 1;
             self.status = FDCStatus::Busy as u8;
             self.raise_nmi = true;
@@ -255,25 +185,47 @@ impl FloppyController {
                 println!("FDC: Write sector (T:{}, S:{})", self.track, self.sector);
             }
 
-            self.read_index = (self.track as usize * SECTOR_COUNT + self.sector as usize) * SECTOR_SIZE;
-            self.read_last = self.read_index + SECTOR_SIZE;
+            let side_2 = self.side_2;
+            let track = self.track;
+            let sector = self.sector;
+            let (a, b) =  self.media_selected().sector_index(side_2, track, sector);
+            self.read_index = a;
+            self.read_last = b;
+
             self.status = FDCStatus::Busy as u8;
             self.raise_nmi = true;
 
         } else if (command & 0xf0) == 0xc0 {
             // READ ADDRESS command, type III
             // 1100_0E00
-            if self.trace {
-                println!("FDC: Read address");
+            let side_2 = self.side_2;
+            let track = self.track;
+            let sector = self.sector;
+            if self.media_selected().is_valid_sector(side_2, track, sector) {
+                if self.trace {
+                    println!("FDC: Read address ({},{},{})", side_2, track, sector);
+                }
+                self.sector = self.media_selected().inc_sector(track, sector);
+                self.status = 0;
+                self.data_buffer.push(self.track);
+                self.data_buffer.push(if side_2 {1} else {0}); // Side
+                self.data_buffer.push(self.sector);
+                self.data_buffer.push(2); // For sector size 512
+                self.data_buffer.push(0); // CRC 1
+                self.data_buffer.push(0); // CRC 2
+            } else {
+                if self.trace {
+                    println!("FDC: Read address ({},{},{}) = Error", side_2, track, sector);
+                }
+                self.status = FDCStatus::SeekErrorOrRecordNotFound as u8;
+                self.data_buffer.push(0);
+                self.data_buffer.push(0);
+                self.data_buffer.push(0);
+                self.data_buffer.push(0);
+                self.data_buffer.push(0);
+                self.data_buffer.push(0);
+                self.data_buffer.push(0);
             }
-            self.inc_sector();
-            self.status = 0;
-            self.data_buffer.push(self.track);
-            self.data_buffer.push(0); // Side
-            self.data_buffer.push(self.sector);
-            self.data_buffer.push(2); // For sector size 512
-            self.data_buffer.push(0); // CRC 1
-            self.data_buffer.push(0); // CRC 2
             self.raise_nmi = true;
         } else if (command & 0xf0) == 0xd0 {
             // FORCE INTERRUPT command, type IV
@@ -325,28 +277,19 @@ impl FloppyController {
         self.sector
     }
 
-    fn write_byte(&mut self, value: u8) {
-        let index = self.read_index;
-        self.content()[index] = value;
-        if index < self.write_min {
-            self.write_min = index;
-        }
-        if index > self.write_max {
-            self.write_max = index;
-        }
-    }
-
     pub fn put_data(&mut self, value: u8) {
         self.data = value;
 
         if self.read_index < self.read_last {
             // Store byte
-            self.write_byte(self.data);
+            let index = self.read_index;
+            let data = self.data;
+            self.media_selected().write_byte(index, data);
             self.read_index += 1;
             self.raise_nmi = true;
             if self.read_index == self.read_last {
                 // We are done writing
-                self.flush_disk();
+                self.media_selected().flush_disk();
                 if self.trace {
                     println!("FDC: Set data completed ${:02x} {}-{}-{}", self.data, self.read_index, self.read_last, self.sector);
                 }
@@ -369,8 +312,8 @@ impl FloppyController {
             self.raise_nmi = true;
         } else if self.read_index < self.read_last {
             // Prepare next byte
-            let read_index = self.read_index;
-            self.data = self.content()[read_index];
+            let index = self.read_index;
+            self.data = self.media_selected().read_byte(index);
             self.read_index += 1;
             self.raise_nmi = true;
         } else if self.read_index != 0 {
@@ -383,9 +326,6 @@ impl FloppyController {
             self.read_last = 0;
             self.data = 0;
             self.sector += 1;
-            if self.sector == SECTOR_COUNT as u8 {
-                self.sector = 0;
-            }
             self.raise_nmi = true;
         }
         //if self.trace {

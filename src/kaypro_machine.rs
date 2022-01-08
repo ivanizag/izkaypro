@@ -16,7 +16,7 @@ use super::keyboard_unix::Keyboard;
 pub enum SystemBit {
     DriveA = 0x01,
     DriveB = 0x02,
-    Unused = 0x04,
+    Side2 = 0x04,
     CentronicsReady = 0x08,
     CentronicsStrobe = 0x10,
     SingleDensity = 0x20,
@@ -60,8 +60,8 @@ const IO_PORT_NAMES: [&'static str; 32] = [
     ];
 
 
-static ROM: &'static [u8] = include_bytes!("../roms/81-149c.rom");
-//static ROM: &'static [u8] = include_bytes!("../roms/81-232.rom");
+//static ROM: &'static [u8] = include_bytes!("../roms/81-149c.rom");
+static ROM: &'static [u8] = include_bytes!("../roms/81-232.rom");
 
 pub struct KayproMachine {
     ram: [u8; 65536],
@@ -108,6 +108,9 @@ impl KayproMachine {
 
         let single_density = bits & SystemBit::SingleDensity as u8 != 0;
         self.floppy_controller.set_single_density(single_density);
+
+        let side_2 = bits & SystemBit::Side2 as u8 != 0;
+        self.floppy_controller.set_side(side_2);
 
         if self.trace_system_bits {
             print_system_bits(self.system_bits);
@@ -197,7 +200,7 @@ fn print_system_bits(system_bits: u8) {
     print!("System bits: ");
     if system_bits & SystemBit::DriveA as u8 != 0           {print!("DriveA ");}
     if system_bits & SystemBit::DriveB as u8 != 0           {print!("DriveB ");}
-    if system_bits & SystemBit::Unused as u8 != 0           {print!("Unused ");}
+    if system_bits & SystemBit::Side2 as u8 != 0           {print!("Side2 ");}
     if system_bits & SystemBit::CentronicsReady  as u8 != 0 {print!("CentronicsReady ");}
     if system_bits & SystemBit::CentronicsStrobe as u8 != 0 {print!("CentronicsStrobe ");}
     if system_bits & SystemBit::SingleDensity as u8 != 0    {print!("SingleDensity ");}

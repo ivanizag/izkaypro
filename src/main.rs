@@ -4,6 +4,7 @@ use iz80::*;
 mod kaypro_machine;
 mod floppy_controller;
 mod keyboard_unix;
+mod media;
 mod screen;
 
 use self::kaypro_machine::KayproMachine;
@@ -81,14 +82,14 @@ fn main() {
     // Load disk images
     if let Some(disk_a) = disk_a {
         if  disk_a != "$" {
-            if let Err(err) = machine.floppy_controller.load_disk(disk_a, false) {
+            if let Err(err) = machine.floppy_controller.media_a_mut().load_disk(disk_a) {
                 println!("Error loading file '{}': {}", disk_a, err);
                 return;
             }
         }
     }
     if let Some(disk_b) = disk_b {
-        if let Err(err) = machine.floppy_controller.load_disk(disk_b, true) {
+        if let Err(err) = machine.floppy_controller.media_b_mut().load_disk(disk_b) {
             println!("Error loading file '{}': {}", disk_b, err);
             return;
         }
@@ -116,7 +117,7 @@ fn main() {
             for command in commands {
                 match command {
                     Command::Quit => {
-                        machine.floppy_controller.flush_disk();
+                        machine.floppy_controller.media_selected().flush_disk();
                         done = true;
                     },
                     Command::Help => {
@@ -127,14 +128,14 @@ fn main() {
                     },
                     Command::SelectDiskA => {
                         let path = screen.prompt(&mut machine, "File to load in Drive A");
-                        let res = machine.floppy_controller.load_disk(path.as_str(), false);
+                        let res = machine.floppy_controller.media_a_mut().load_disk(path.as_str());
                         if let Err(err) = res {
                             screen.message(&mut machine, &err.to_string())
                         }
                     }
                     Command::SelectDiskB => {
                         let path = screen.prompt(& mut machine, "File to load in Drive B");
-                        let res = machine.floppy_controller.load_disk(path.as_str(), true);
+                        let res = machine.floppy_controller.media_b_mut().load_disk(path.as_str());
                         if let Err(err) = res {
                             screen.message(&mut machine, &err.to_string())
                         }
