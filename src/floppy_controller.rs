@@ -205,7 +205,7 @@ impl FloppyController {
                 if self.trace {
                     println!("FDC: Read address ({},{},{})", side_2, track, sector);
                 }
-                self.sector = self.media_selected().inc_sector(track, sector);
+                self.sector = self.media_selected().inc_sector(sector);
                 self.status = 0;
                 self.data_buffer.push(self.track);
                 self.data_buffer.push(if side_2 {1} else {0}); // Side

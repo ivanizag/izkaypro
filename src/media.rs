@@ -6,7 +6,6 @@ pub enum MediaFormat {
     Unformatted,
     SSSD,     // Single-sided, single-density
     SSDD,     // Single-sided, double-density
-    SSDDALT,  // Single-sided, double-density, the first 4 tracks have 9 sectors instead of 10
     DSDD,     // Double-sided, double-density
 }
 
@@ -15,10 +14,8 @@ const SECTOR_SIZE: usize = 512;
 fn detect_media_format(len: usize) -> MediaFormat {
     if len == 102400 {
         MediaFormat::SSSD
-    } else if len == 202752 {
-        MediaFormat::SSDDALT
     } else if len >= 204800 && len <= 205824 {
-        // Some valid disk image are a bit bigger, I don't know why
+        // Some valid disk images are a bit bigger, I don't know why
         MediaFormat::SSDD
     } else if len == 409600 {
         MediaFormat::DSDD
@@ -38,36 +35,23 @@ pub struct Media {
 }
 
 impl Media {
-    pub fn sides(&self) -> u8 {
-        match self.format {
-            MediaFormat::SSSD => 1,
-            MediaFormat::SSDD => 1,
-            MediaFormat::SSDDALT => 1,
-            MediaFormat::DSDD => 2,
-            MediaFormat::Unformatted => 0,
-        }
+    pub fn double_sided(&self) -> bool {
+        self.format == MediaFormat::DSDD
     }
 
     pub fn tracks(&self) -> u8 {
         match self.format {
             MediaFormat::SSSD => 40,
             MediaFormat::SSDD => 40,
-            MediaFormat::SSDDALT => 40,
             MediaFormat::DSDD => 40,
             MediaFormat::Unformatted => 0,
         }
     }
 
-    pub fn sectors(&self, track: u8) -> u8 {
+    pub fn sectors(&self) -> u8 {
         match self.format {
             MediaFormat::SSSD => 10,
             MediaFormat::SSDD => 10,
-            MediaFormat::SSDDALT =>
-                if track < 4 {
-                    9
-                } else {
-                    10
-                },
             MediaFormat::DSDD => 20,
             MediaFormat::Unformatted => 0,
         }
@@ -77,15 +61,7 @@ impl Media {
         let track = track as usize;
         let sector = sector as usize;
 
-        if self.format == MediaFormat::SSDDALT {
-            if track < 4 {
-                // On SSDD_alt, the first 4 tracks have 9 sectors instead of 10
-                (track * 9 + sector) * SECTOR_SIZE
-            } else {
-                // The rest of the SSDD_alt tracks have 10 sectors
-                (track * 10 + sector - 4) * SECTOR_SIZE
-            }
-        } else if self.format == MediaFormat::DSDD {
+        if self.format == MediaFormat::DSDD {
             if sector < 10 {
                 // On DSDD, the first 10 sectors are on the first side
                 (track * 10 + sector) * SECTOR_SIZE
@@ -94,7 +70,7 @@ impl Media {
                 (track * 10 + sector - 10) * SECTOR_SIZE
             }
         } else {
-            (track * self.sectors(0) as usize + sector) * SECTOR_SIZE
+            (track * self.sectors() as usize + sector) * SECTOR_SIZE
         }
     }
 
@@ -166,12 +142,12 @@ impl Media {
     }
 
     pub fn is_valid_sector(&self, side_2: bool, track: u8, sector: u8) -> bool {
-        track < self.tracks() && sector < self.sectors(track) && (!side_2 || self.sides() == 2)
+        track < self.tracks() && sector < self.sectors() && (!side_2 || self.double_sided())
     }
 
-    pub fn inc_sector(&self, track: u8, sector: u8) -> u8 {
+    pub fn inc_sector(&self, sector: u8) -> u8 {
         let new_sector = sector + 1;
-        if new_sector >= self.sectors(track) {
+        if new_sector >= self.sectors() {
             0
         } else {
             new_sector
@@ -180,8 +156,8 @@ impl Media {
 
     pub fn sector_index(&self, side_2: bool, track: u8, sector: u8) -> (usize, usize) {
         let mut index = self.sector_start(track, sector);
-        if side_2 && self.sides() == 2 {
-            index += self.sectors(track) as usize / 2 * self.tracks() as usize * SECTOR_SIZE;
+        if side_2 && self.double_sided() {
+            index += self.sectors() as usize / 2 * self.tracks() as usize * SECTOR_SIZE;
         }
         let last = index + SECTOR_SIZE;
         (index, last)
@@ -211,7 +187,6 @@ impl Media {
                 MediaFormat::Unformatted => " (unformatted)",
                 MediaFormat::SSSD => " (SSSD)",
                 MediaFormat::SSDD => " (SSDD)",
-                MediaFormat::SSDDALT => " (SSDD_alt)",
                 MediaFormat::DSDD => " (DSDD)",
             } + ")"
     }
