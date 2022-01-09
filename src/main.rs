@@ -170,7 +170,8 @@ fn main() {
             break;
         }
 
-        // Tracing
+        // Tracing for ROM 81-149c
+        /*
         if trace_rom && machine.is_rom_rank(){
             let dma = machine.peek16(0xfc14);
             match cpu.registers().pc() {
@@ -188,6 +189,36 @@ fn main() {
                 0x03e4 => println!("EP_SECTRAN"),
                 0x040f => println!("EP_DISKON"),
                 0x041e => println!("EP_DISKOFF"),
+                0xfa00 => println!("FUNC: OS start"),
+                _ => {}
+            }
+        }
+        */
+
+        // Tracing for ROM 81-232
+        if trace_rom && machine.is_rom_rank(){
+            let dma = machine.peek16(0xfc14);
+            match cpu.registers().pc() {
+                0x004b => println!("EP_COLD"),
+                0x0195 => println!("EP_INITDSK"),
+                0x0006 => println!("EP_INITVID"),
+                0x0009 => println!("EP_INITDEV"),
+                0x01e7 => println!("EP_HOME"),
+                0x01c3 => {
+                    println!("EP_SELDSK {}", cpu.registers().get8(Reg8::C));
+                    //cpu.set_trace(true)
+                },
+                0x01db => println!("EP_SETTRK {}", cpu.registers().get8(Reg8::C)),
+                0x01ca => println!("EP_SETSEC {}", cpu.registers().get8(Reg8::C)),
+                0x01d6 => {
+                    println!("EP_SETDMA");
+                    cpu.set_trace(false);
+                },
+                0x01fb => println!("EP_READ {:04x}", dma),
+                0x0216 => println!("EP_WRITE {:04x}", dma),
+                0x0479 => println!("EP_SECTRAN"),
+                0x04a2 => println!("EP_DISKON"),
+                0x04b1 => println!("EP_DISKOFF"),
                 0xfa00 => println!("FUNC: OS start"),
                 _ => {}
             }
