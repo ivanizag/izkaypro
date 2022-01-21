@@ -169,6 +169,12 @@ impl Keyboard {
             }
             // Parse the rest
             self.parse_input(size-i, &input[i..]);
+        } else if size >= 2 && input[0] == 0xc3 && input[1] == 0xb1 {
+            self.key = ':' as u8; // ñ is on the : position
+            self.key_available = true;
+        } else if size >= 2 && input[0] == 0xc3 && input[1] == 0x91 {
+            self.key = ';' as u8; // Ñ is on the ; position
+            self.key_available = true;
         } else {
             self.key = input[0];
             self.key = match self.key {
