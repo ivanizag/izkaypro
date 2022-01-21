@@ -8,11 +8,19 @@ pub struct Screen {
     pub show_help: bool,
 }
 
-const CONTROL_CHARS: [char; 32] = [
+#[allow(dead_code)]
+const CONTROL_CHARS_81_146A: [char; 32] = [
     '`', 'α', 'β', 'γ', 'δ', 'ϵ', 'ϕ', 'ν',
     'θ', 'ι', 'σ', 'κ', 'λ', 'μ', 'υ', 'ω',
     'π', 'η', 'ρ', 'Σ', 'τ', 'χ', 'ψ', '≠',
     'Ξ', 'Ω', 'ζ', '{', '|', '}', '~', '█'];
+
+const CONTROL_CHARS_81_234: [char; 32] = [
+    'ñ', 'á', 'é', 'í', 'ó', 'ú', 'â', 'ê',
+    'î', 'ô', 'û', '£', 'Ä', 'Ö', 'Ü', '¡',
+    'Ñ', 'à', 'è', 'ì', 'ò', 'ù', 'ä', 'ë',
+    'ï', 'ö', 'ü', 'º', '§', 'c', 'ß', '¿'];
+    
 
 const SHOWN_SYSTEM_BITS: u8 = 0b0110_0011;
 
@@ -141,6 +149,7 @@ impl Screen {
         println!("||        |  F4: Quit the emulator        |  Insert to LINEFEED            |        ||");
         println!("||        |  F5: Select file for drive A: |                                |        ||");
         println!("||        |  F6: Select file for drive B: |                                |        ||");
+        println!("||        |  F7: Save BIOS to file        |                                |        ||");
         println!("||        |  F8: Toggle CPU trace         |                                |        ||");
         println!("||        +----------------------------------------------------------------+        ||");
         println!("||        |  Loaded images:                                                |        ||");
@@ -159,7 +168,7 @@ impl Screen {
 fn translate_char(code: u8) -> char {
     let index = code & 0x7f;
     if index < 0x20 {
-        CONTROL_CHARS[index as usize]
+        CONTROL_CHARS_81_234[index as usize]
     } else if index == 0x7f {
         '▒'
     } else {

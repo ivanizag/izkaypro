@@ -1,3 +1,6 @@
+use std::fs::{File};
+use std::io::{Write};
+
 use iz80::Machine;
 use super::FloppyController;
 use super::keyboard_unix::Keyboard;
@@ -53,7 +56,7 @@ const IO_PORT_NAMES: [&'static str; 32] = [
     /* 0x19 */"-",
     /* 0x1a */"-",
     /* 0x1b */"-",
-    /* 0x1c */"SIO 2 channel A data register: ",
+    /* 0x1c */"PIO 2 channel A data register: ",
     /* 0x1d */"PIO 2 channel A control register.",
     /* 0x1e */"PIO 2 channel B data register.",
     /* 0x1f */"PIO 2 channel B control register.",
@@ -116,6 +119,15 @@ impl KayproMachine {
             print_system_bits(self.system_bits);
         }
     }
+
+    pub fn save_bios(&self) {
+        let start = self.ram[1] as usize +
+            ((self.ram[2] as usize) << 8) - 3;
+        let end = 0xfc00;
+
+        let mut file = File::create(format!("bios_{:x}.bin", start),).unwrap();
+        file.write_all(&self.ram[start..end]).unwrap();
+    }
 }
 
 impl Machine for KayproMachine {
@@ -131,7 +143,8 @@ impl Machine for KayproMachine {
 
     fn poke(&mut self, address: u16, value: u8) {
         if address < 0x3000 && self.is_rom_rank() {
-            // Ignore writes to ROM
+            // Writes to ROM go to the RAM
+            self.ram[address as usize] = value;
         } else if address < 0x4000 && self.is_rom_rank() {
             self.vram[address as usize - 0x3000] = value;
             self.vram_dirty = true;

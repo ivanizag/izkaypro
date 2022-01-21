@@ -17,7 +17,7 @@ fn detect_media_format(len: usize) -> MediaFormat {
     } else if len >= 204800 && len <= 205824 {
         // Some valid disk images are a bit bigger, I don't know why
         MediaFormat::SSDD
-    } else if len == 409600 {
+    } else if len >= 409600 && len <= 409728 {
         MediaFormat::DSDD
     } else {
         MediaFormat::Unformatted
@@ -109,15 +109,15 @@ impl Media {
             Some(file)
         };
 
-        let format = detect_media_format(self.content.len());
+        let format = detect_media_format(content.len());
         if format == MediaFormat::Unformatted {
-            return Err(Error::new(ErrorKind::Other, "Unrecognized disk image format"));
+            return Err(Error::new(ErrorKind::Other, format!("Unrecognized disk image format (len {})", content.len())));
         }
 
         self.file = file;
         self.name = filename.to_owned();
         self.content = content;
-        self.format = detect_media_format(self.content.len());
+        self.format = format;
 
         Ok(())
     }

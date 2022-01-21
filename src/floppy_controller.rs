@@ -32,14 +32,14 @@ pub struct FloppyController {
 #[derive(Copy, Clone)]
 #[repr(u8)]
 pub enum FDCStatus {
-    _NotReady = 0x01,
-    _WriteProtected = 0x02,
-    _WriteFault = 0x04,
-    SeekErrorOrRecordNotFound = 0x08,
-    _CRCError = 0x10,
-    LostDataOrTrack0 = 0x20,
-    _DataRequest = 0x40,
-    Busy = 0x80,
+    _NotReady = 0x80,
+    _WriteProtected = 0x40,
+    _WriteFault = 0x20,
+    SeekErrorOrRecordNotFound = 0x10,
+    _CRCError = 0x08,
+    LostDataOrTrack0 = 0x04,
+    _DataRequest = 0x02,
+    Busy = 0x01,
 }
 
 impl FloppyController {
@@ -240,6 +240,7 @@ impl FloppyController {
                 self.read_index = 0;
                 self.read_last = 0;
                 self.data_buffer.clear();
+                self.status &= !(FDCStatus::Busy as u8);
             } else {
                 panic!("FDC: Interrupt forced with non zero I");
             }

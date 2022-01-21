@@ -140,6 +140,9 @@ fn main() {
                             screen.message(&mut machine, &err.to_string())
                         }
                     }
+                    Command::SaveMemory => {
+                        machine.save_bios()
+                    }
                     Command::TraceCPU => {
                         trace_cpu = !trace_cpu;
                         cpu.set_trace(trace_cpu);
@@ -206,13 +209,11 @@ fn main() {
                 0x01e7 => println!("EP_HOME"),
                 0x01c3 => {
                     println!("EP_SELDSK {}", cpu.registers().get8(Reg8::C));
-                    //cpu.set_trace(true)
                 },
                 0x01db => println!("EP_SETTRK {}", cpu.registers().get8(Reg8::C)),
                 0x01ca => println!("EP_SETSEC {}", cpu.registers().get8(Reg8::C)),
                 0x01d6 => {
                     println!("EP_SETDMA");
-                    cpu.set_trace(false);
                 },
                 0x01fb => println!("EP_READ {:04x}", dma),
                 0x0216 => println!("EP_WRITE {:04x}", dma),

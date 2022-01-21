@@ -14,6 +14,7 @@ pub enum Command {
     SelectDiskB,
     ShowStatus,
     TraceCPU,
+    SaveMemory,
 }
 
 pub struct Keyboard {
@@ -128,6 +129,9 @@ impl Keyboard {
                 "[17~" => { // F6
                     self.commands.push(Command::SelectDiskB);
                 }
+                "[18~" => { // F7
+                    self.commands.push(Command::SaveMemory);
+                }
                 "[19~" => { // F8
                     self.commands.push(Command::TraceCPU);
                 }
@@ -142,23 +146,23 @@ impl Keyboard {
                     self.key_available = true;
                 }
                 "[A" => {
-                    // Up arrow mapped to ^K
-                    self.key = 0x0b;
+                    // Up arrow mapped to ^K on the BIOS
+                    self.key = 0xf1; //0x0b;
                     self.key_available = true;
                 }
                 "[B" => {
-                    // Down arrow mapped to ^J
-                    self.key = 0x0a;
+                    // Down arrow mapped to ^J on the BIOS
+                    self.key = 0xf2; //0x0a;
                     self.key_available = true;
                 }
                 "[C" => {
-                    // Right arrow mapped to ^L
-                    self.key = 0x0c;
+                    // Right arrow mapped to ^L on the BIOS
+                    self.key = 0xf4; //0x0c;
                     self.key_available = true;
                 }
                 "[D" => {
-                    // Left arrow mapped to ^H
-                    self.key = 0x08;
+                    // Left arrow mapped to ^H on the BIOS
+                    self.key = 0xf3; //0x08;
                     self.key_available = true;
                 }
                 _ => {}
