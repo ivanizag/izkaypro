@@ -8,7 +8,7 @@ Uses the [iz80](https://github.com/ivanizag/iz80) library. Made with Rust.
 
 ## What is/was a Kaypro II computer?
 
-The Kaypro II computer was a luggable computer from 1982 capable of running CP/M 2.2. It was considered "a rugged, functional and practical computer system marketed at a reasonable price." (From [Wipedia](https://en.wikipedia.org/wiki/Kaypro))
+The Kaypro II computer was a luggable computer from 1982 capable of running CP/M 2.2. It was considered "a rugged, functional and practical computer system marketed at a reasonable price." (From [Wikipedia](https://en.wikipedia.org/wiki/Kaypro))
 
 It's a typical CP/M computer of the early 80s, built on a metal case with standard components, a 9" green monochrome CRT, a detachable keyboard and two disk drives. Main features:
 
@@ -17,7 +17,7 @@ It's a typical CP/M computer of the early 80s, built on a metal case with standa
 - 2 KB of ROM
 - 2 KB of video RAM
 - 80*24 text mode (no graphics capabilities)
-- Two single side double density drives with 195kb capacity
+- Two single or double side double density drives with 200kb/400kb capacity
 - A serial port (not emulated by izkaypro)
 - A parallel port (not emulated by izkaypro)
 

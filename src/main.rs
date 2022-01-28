@@ -103,6 +103,9 @@ fn main() {
     let mut next_signal: u64 = 0;
     let mut done = false;
     while !done {
+        //let pc = cpu.registers().pc();
+        //cpu.set_trace(pc >= 0xf7fd && pc <= 0xf858);
+
         cpu.execute_instruction(&mut machine);
         counter += 1;
 

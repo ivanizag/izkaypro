@@ -65,6 +65,10 @@ const IO_PORT_NAMES: [&'static str; 32] = [
 
 //static ROM: &'static [u8] = include_bytes!("../roms/81-149c.rom");
 static ROM: &'static [u8] = include_bytes!("../roms/81-232.rom");
+//static ROM: &'static [u8] = include_bytes!("../roms/kplus83.rom");
+//static ROM: &'static [u8] = include_bytes!("../roms/omni2.u47");
+//static ROM: &'static [u8] = include_bytes!("../roms/kaypro_ii_roadrunner_1_5.bin");
+//static ROM: &'static [u8] = include_bytes!("../roms/trom34_3.rom");
 
 pub struct KayproMachine {
     ram: [u8; 65536],

@@ -17,7 +17,7 @@ fn detect_media_format(len: usize) -> MediaFormat {
     } else if len >= 204800 && len <= 205824 {
         // Some valid disk images are a bit bigger, I don't know why
         MediaFormat::SSDD
-    } else if len >= 409600 && len <= 409728 {
+    } else if len >= 409600 && len <= 411648 {
         MediaFormat::DSDD
     } else {
         MediaFormat::Unformatted
