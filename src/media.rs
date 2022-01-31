@@ -1,6 +1,37 @@
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Write, Seek, SeekFrom, Result, Error, ErrorKind};
 
+/*
+Notes on the DSDD disks as seen by different components:
+
+Physical disk:
+    There are two sides with 40 tracks each.
+    Each track has 10 sectors, each with 512 bytes.
+    The sectors on side 1 are numbered from 0 to 9,
+    and on side 2 from 10 to 19.
+
+Floppy controller:
+    The controller doesn't know the disk side.
+    The head can move from tack 0 to 39.
+    When looking for a sector, the sector id of
+    the media has to match.
+
+BIOS and ROM entrypoints:
+    There are no sides.
+    Tracks are numbered from 0 to 79. Even tracks
+    are on side 1, odd tracks are on side 2.
+    Logical sectors are numbered from 0 to 39, each with 128 bytes
+
+File images:
+    They have the same order as per the BIOS entrypoints
+    The file has 2*40*10*4 logical ectors, each with 128 bytes.
+    First the 40 sectors of the first track of side 1,
+    then the 40 sectors of the first track of side 2,
+    then the 40 sectors of the second track of side 1,
+    then the 40 sectors of the second track of side 2,
+    and so on.
+*/
+
 #[derive(PartialEq)]
 pub enum MediaFormat {
     Unformatted,
@@ -48,6 +79,15 @@ impl Media {
         }
     }
 
+    pub fn sectors_per_side(&self) -> u8 {
+        match self.format {
+            MediaFormat::SSSD => 10,
+            MediaFormat::SSDD => 10,
+            MediaFormat::DSDD => 10,
+            MediaFormat::Unformatted => 0,
+        }
+    }
+
     pub fn sectors(&self) -> u8 {
         match self.format {
             MediaFormat::SSSD => 10,
@@ -57,22 +97,6 @@ impl Media {
         }
     }
 
-    pub fn sector_start(&self, track: u8, sector: u8) -> usize {
-        let track = track as usize;
-        let sector = sector as usize;
-
-        if self.format == MediaFormat::DSDD {
-            if sector < 10 {
-                // On DSDD, the first 10 sectors are on the first side
-                (track * 10 + sector) * SECTOR_SIZE
-            } else {
-                // The rest of the DSDD sectors are on the second side
-                (track * 10 + sector - 10) * SECTOR_SIZE
-            }
-        } else {
-            (track * self.sectors() as usize + sector) * SECTOR_SIZE
-        }
-    }
 
     pub fn load_disk(&mut self, filename: &str) -> Result<()>{
         self.flush_disk();
@@ -142,25 +166,45 @@ impl Media {
     }
 
     pub fn is_valid_sector(&self, side_2: bool, track: u8, sector: u8) -> bool {
-        track < self.tracks() && sector < self.sectors() && (!side_2 || self.double_sided())
+        track < self.tracks() && sector < self.sectors_per_side() && (!side_2 || self.double_sided())
     }
 
     pub fn inc_sector(&self, sector: u8) -> u8 {
         let new_sector = sector + 1;
-        if new_sector >= self.sectors() {
+        if new_sector >= self.sectors_per_side() {
             0
         } else {
             new_sector
         }
     }
 
-    pub fn sector_index(&self, side_2: bool, track: u8, sector: u8) -> (usize, usize) {
-        let mut index = self.sector_start(track, sector);
-        if side_2 && self.double_sided() {
-            index += self.sectors() as usize / 2 * self.tracks() as usize * SECTOR_SIZE;
+    pub fn sector_index(&self, side_2: bool, track: u8, sector: u8) -> (bool, usize, usize) {
+        // Validate side, track and sector
+        if side_2 && !self.double_sided() {
+            // Side 2 in a single-sided disk
+            return (false, 0, 0);
         }
+        if track >= self.tracks() {
+            // Track out of range
+            return (false, 0, 0);
+        }
+        if !side_2 && sector >= self.sectors_per_side() {
+            // Sector out of range for side 1
+            return (false, 0, 0);
+        }
+        if side_2 && sector < self.sectors_per_side() {
+            // Sector too low for side 1
+            return (false, 0, 0);
+        }
+        if side_2 && sector >=self.sectors() {
+            // Sector out of range for side 2
+            return (false, 0, 0);
+        }
+    
+        // Compute the index
+        let index = (track as usize * self.sectors() as usize + sector as usize) * SECTOR_SIZE;
         let last = index + SECTOR_SIZE;
-        (index, last)
+        (true, index, last)
     }
 
     pub fn read_byte(&self, index: usize) -> u8 {

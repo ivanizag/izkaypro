@@ -41,6 +41,10 @@ fn main() {
             .short("f")
             .long("fdc-trace")
             .help("Traces access to the floppy disk controller"))
+        .arg(Arg::with_name("fdc_trace_rw")
+            .short("w")
+            .long("fdc-trace-rw")
+            .help("Traces RW access to the floppy disk controller"))
         .arg(Arg::with_name("system_bits")
             .short("s")
             .long("system-bits")
@@ -60,6 +64,7 @@ fn main() {
     let mut trace_cpu = matches.is_present("cpu_trace");
     let trace_io = matches.is_present("io_trace");
     let trace_fdc = matches.is_present("fdc_trace");
+    let trace_fdc_rw = matches.is_present("fdc_trace_rw");
     let trace_system_bits = matches.is_present("system_bits");
     let trace_rom = matches.is_present("rom_trace");
     let trace_bdos = matches.is_present("bdos_trace");
@@ -67,12 +72,13 @@ fn main() {
     let any_trace = trace_io
         || trace_cpu
         || trace_fdc
+        || trace_fdc_rw
         || trace_rom
         || trace_bdos
         || trace_system_bits;
 
     // Init device
-    let floppy_controller = FloppyController::new(trace_fdc);
+    let floppy_controller = FloppyController::new(trace_fdc, trace_fdc_rw);
     let mut screen = Screen::new(!any_trace);
     let mut machine = KayproMachine::new(floppy_controller,
         trace_io, trace_system_bits);
@@ -99,18 +105,23 @@ fn main() {
     println!("{}", WELCOME);
     screen.init();
 
+    let instructions_per_refresh = if any_trace {256*1024} else {2*1024};
+
     let mut counter: u64 = 1;
     let mut next_signal: u64 = 0;
     let mut done = false;
     while !done {
-        //let pc = cpu.registers().pc();
+        let pc = cpu.registers().pc();
         //cpu.set_trace(pc >= 0xf7fd && pc <= 0xf858);
+        if pc == 0x32c { // && !machine.is_rom_rank(){
+        //    cpu.set_trace(true);
+        }
 
         cpu.execute_instruction(&mut machine);
         counter += 1;
 
         // IO refresh
-        if counter % 2048 == 0 {
+        if counter % instructions_per_refresh == 0 {
             machine.keyboard.consume_input();
             screen.update(&mut machine, false);
         }

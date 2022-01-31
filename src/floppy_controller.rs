@@ -1,6 +1,6 @@
 use super::media::*;
 
-static DISK_CPM22: &'static [u8] = include_bytes!("../disks/cpm22-bios149.img");
+static DISK_CPM22: &'static [u8] = include_bytes!("../disks/cpm22-rom232.img");
 static DISK_BLANK: &'static [u8] = include_bytes!("../disks/blank.img");
 
 pub enum Drive {
@@ -26,7 +26,8 @@ pub struct FloppyController {
     data_buffer: Vec<u8>,
 
     pub raise_nmi: bool,
-    pub trace: bool
+    pub trace: bool,
+    pub trace_rw: bool
 }
 
 #[derive(Copy, Clone)]
@@ -43,7 +44,7 @@ pub enum FDCStatus {
 }
 
 impl FloppyController {
-    pub fn new(trace: bool) -> FloppyController {
+    pub fn new(trace: bool, trace_rw: bool) -> FloppyController {
         FloppyController {
             motor_on: false,
             drive: 0,
@@ -79,6 +80,7 @@ impl FloppyController {
 
             raise_nmi: false,
             trace: trace,
+            trace_rw: trace_rw,
         }
     }
 
@@ -156,20 +158,21 @@ impl FloppyController {
             if command & 0x10 != 0 {
                 panic!("Multiple sector reads not supported")
             }
-            if self.trace {
-                println!("FDC: Read sector (S:{}, T:{}, S:{})", self.side_2, self.track, self.sector);
+            if self.trace || self.trace_rw {
+                println!("FDC: Read sector (Si:{}, Tr:{}, Se:{})", self.side_2, self.track, self.sector);
             }
 
             let side_2 = self.side_2;
             let track = self.track;
             let sector = self.sector;
-            let (index, last) =  self.media_selected().sector_index(side_2, track, sector);
-            self.read_index = index;
-            self.read_last = last;
-
-            self.data = self.media_selected().read_byte(index);
-            self.read_index += 1;
-            self.status = FDCStatus::Busy as u8;
+            let (valid, index, last) =  self.media_selected().sector_index(side_2, track, sector);
+            if valid {
+                self.read_index = index;
+                self.read_last = last;
+                self.status = FDCStatus::Busy as u8;
+            } else {
+                self.status = FDCStatus::SeekErrorOrRecordNotFound as u8;
+            }
             self.raise_nmi = true;
 
         } else if (command & 0xe0) == 0xa0 {
@@ -181,18 +184,21 @@ impl FloppyController {
             if command & 0x01 != 0 {
                 panic!("Delete data mark not supported")
             }
-            if self.trace {
-                println!("FDC: Write sector (T:{}, S:{})", self.track, self.sector);
+            if self.trace || self.trace_rw {
+                println!("FDC: Write sector (Si:{}, Tr:{}, Se:{})", self.side_2, self.track, self.sector);
             }
 
             let side_2 = self.side_2;
             let track = self.track;
             let sector = self.sector;
-            let (a, b) =  self.media_selected().sector_index(side_2, track, sector);
-            self.read_index = a;
-            self.read_last = b;
-
-            self.status = FDCStatus::Busy as u8;
+            let (valid, index, last) =  self.media_selected().sector_index(side_2, track, sector);
+            if valid {
+                self.read_index = index;
+                self.read_last = last;
+                self.status = FDCStatus::Busy as u8;
+            } else {
+                self.status = FDCStatus::SeekErrorOrRecordNotFound as u8;
+            }
             self.raise_nmi = true;
 
         } else if (command & 0xf0) == 0xc0 {
@@ -207,9 +213,11 @@ impl FloppyController {
                 }
                 self.sector = self.media_selected().inc_sector(sector);
                 self.status = 0;
+                self.data_buffer.clear();
                 self.data_buffer.push(self.track);
                 self.data_buffer.push(if side_2 {1} else {0}); // Side
-                self.data_buffer.push(self.sector);
+                let sector_id = self.sector + if side_2 {self.media_selected().sectors_per_side()} else {0};
+                self.data_buffer.push(sector_id);
                 self.data_buffer.push(2); // For sector size 512
                 self.data_buffer.push(0); // CRC 1
                 self.data_buffer.push(0); // CRC 2
@@ -306,32 +314,34 @@ impl FloppyController {
     }
 
     pub fn get_data(&mut self) -> u8 {
-        let data = self.data;
         if self.data_buffer.len() > 0 {
             self.data = self.data_buffer[0];
             self.data_buffer.remove(0);
             self.raise_nmi = true;
-        } else if self.read_index < self.read_last {
-            // Prepare next byte
-            let index = self.read_index;
-            self.data = self.media_selected().read_byte(index);
-            self.read_index += 1;
-            self.raise_nmi = true;
-        } else if self.read_index != 0 {
-            // We are done reading
-            if self.trace {
-                println!("FDC: Get data completed ${:02x} {}-{}-{}", data, self.read_index, self.read_last, self.sector);
+        } else {
+            if self.read_index < self.read_last {
+                // Prepare next byte
+                let index = self.read_index;
+                self.data = self.media_selected().read_byte(index);
+                self.read_index += 1;
+                self.raise_nmi = true;
+                if self.read_index == self.read_last {
+                    // We are done reading
+                    if self.trace {
+                        println!("FDC: Get data completed ${:02x} {}-{}-{}", self.data, self.read_index, self.read_last, self.sector);
+                    }
+                    self.status = 0;
+                    self.read_index = 0;
+                    self.read_last = 0;
+                    //self.data = 0;
+                    self.sector += 1;
+                    //self.raise_nmi = true;
+                }
             }
-            self.status = 0;
-            self.read_index = 0;
-            self.read_last = 0;
-            self.data = 0;
-            self.sector += 1;
-            self.raise_nmi = true;
         }
         //if self.trace {
-        //    println!("FDC: Get data ${:02x} {}-{}-{}", data, self.read_index, self.read_last, self.sector);
+        //    println!("FDC: Get data ${:02x} {}-{}-{}", self.data, self.read_index, self.read_last, self.sector);
         //}
-        data
+        self.data
     }
 }

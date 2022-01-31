@@ -24,6 +24,8 @@ You can use the .IMG file with izkaypro
 
 ### Prerequisites
 Install cpmtools (`sudo apt install cpmtools` in Ubuntu).
+Use `-f kpii` for SSDD disks (204800 bytes).
+Use `-f kpiv` for DSDD disks (409600 bytes).
 
 ### Extract files from the image
 `cpmcp -f kpii kayprodisk.img 0:*.* destination`
