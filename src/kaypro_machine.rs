@@ -44,7 +44,7 @@ const IO_PORT_NAMES: [&'static str; 32] = [
     /* 0x0d */"-",
     /* 0x0e */"-",
     /* 0x0f */"-",
-    /* 0x10 */"Floppy controller, Command register.",
+    /* 0x10 */"Floppy controller, Command/status register.",
     /* 0x11 */"Floppy controller, Track register.",
     /* 0x12 */"Floppy controller, Sector register.",
     /* 0x13 */"Floppy controller, Data register.",
@@ -217,7 +217,7 @@ fn print_system_bits(system_bits: u8) {
     print!("System bits: ");
     if system_bits & SystemBit::DriveA as u8 != 0           {print!("DriveA ");}
     if system_bits & SystemBit::DriveB as u8 != 0           {print!("DriveB ");}
-    if system_bits & SystemBit::Side2 as u8 != 0           {print!("Side2 ");}
+    if system_bits & SystemBit::Side2 as u8 != 0            {print!("Side2 ");}
     if system_bits & SystemBit::CentronicsReady  as u8 != 0 {print!("CentronicsReady ");}
     if system_bits & SystemBit::CentronicsStrobe as u8 != 0 {print!("CentronicsStrobe ");}
     if system_bits & SystemBit::SingleDensity as u8 != 0    {print!("SingleDensity ");}

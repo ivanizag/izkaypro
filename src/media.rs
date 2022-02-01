@@ -165,9 +165,19 @@ impl Media {
         track < self.tracks()
     }
 
-    pub fn is_valid_sector(&self, side_2: bool, track: u8, sector: u8) -> bool {
-        track < self.tracks() && sector < self.sectors_per_side() && (!side_2 || self.double_sided())
+    pub fn read_address(&self, side_2: bool, track: u8, sector: u8) -> (bool, u8) {
+        if track >= self.tracks() || (side_2 && !self.double_sided()) {
+            // No formatted info
+            return (false, 0);
+        }
+
+        let mut real_sector = sector % self.sectors_per_side();
+        if side_2 {
+            real_sector += self.sectors_per_side();
+        }
+        (true, real_sector)
     }
+
 
     pub fn inc_sector(&self, sector: u8) -> u8 {
         let new_sector = sector + 1;

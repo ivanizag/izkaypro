@@ -41,6 +41,7 @@ pub enum FDCStatus {
     LostDataOrTrack0 = 0x04,
     _DataRequest = 0x02,
     Busy = 0x01,
+    NoError = 0x00,
 }
 
 impl FloppyController {
@@ -146,7 +147,7 @@ impl FloppyController {
             }
             if self.media_selected().is_valid_track(track) {
                 self.track = track;
-                self.status = 0;
+                self.status = FDCStatus::NoError as u8;
                 self.raise_nmi = true;
             } else {
                 self.status = FDCStatus::SeekErrorOrRecordNotFound as u8;
@@ -207,16 +208,17 @@ impl FloppyController {
             let side_2 = self.side_2;
             let track = self.track;
             let sector = self.sector;
-            if self.media_selected().is_valid_sector(side_2, track, sector) {
+
+            let (valid, sector_id) = self.media_selected().read_address(side_2, track, sector);
+            if valid {
                 if self.trace {
                     println!("FDC: Read address ({},{},{})", side_2, track, sector);
                 }
                 self.sector = self.media_selected().inc_sector(sector);
-                self.status = 0;
+                self.status = FDCStatus::NoError as u8;
                 self.data_buffer.clear();
                 self.data_buffer.push(self.track);
-                self.data_buffer.push(if side_2 {1} else {0}); // Side
-                let sector_id = self.sector + if side_2 {self.media_selected().sectors_per_side()} else {0};
+                self.data_buffer.push(if side_2 {1} else {0});
                 self.data_buffer.push(sector_id);
                 self.data_buffer.push(2); // For sector size 512
                 self.data_buffer.push(0); // CRC 1
@@ -302,7 +304,7 @@ impl FloppyController {
                 if self.trace {
                     println!("FDC: Set data completed ${:02x} {}-{}-{}", self.data, self.read_index, self.read_last, self.sector);
                 }
-                self.status = 0;
+                self.status = FDCStatus::NoError as u8;
                 self.read_index = 0;
                 self.read_last = 0;
             }
@@ -330,15 +332,14 @@ impl FloppyController {
                     if self.trace {
                         println!("FDC: Get data completed ${:02x} {}-{}-{}", self.data, self.read_index, self.read_last, self.sector);
                     }
-                    self.status = 0;
+                    self.status = FDCStatus::NoError as u8;
                     self.read_index = 0;
                     self.read_last = 0;
-                    //self.data = 0;
                     self.sector += 1;
-                    //self.raise_nmi = true;
                 }
             }
         }
+
         //if self.trace {
         //    println!("FDC: Get data ${:02x} {}-{}-{}", self.data, self.read_index, self.read_last, self.sector);
         //}
