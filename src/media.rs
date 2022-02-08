@@ -45,10 +45,10 @@ const SECTOR_SIZE: usize = 512;
 fn detect_media_format(len: usize) -> MediaFormat {
     if len == 102400 {
         MediaFormat::SSSD
-    } else if len >= 204800 && len <= 205824 {
+    } else if (204800..=205824).contains(&len) {
         // Some valid disk images are a bit bigger, I don't know why
         MediaFormat::SSDD
-    } else if len >= 409600 && len <= 411648 {
+    } else if (409600..=411648).contains(&len) {
         MediaFormat::DSDD
     } else {
         MediaFormat::Unformatted

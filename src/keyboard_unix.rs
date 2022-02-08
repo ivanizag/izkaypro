@@ -30,7 +30,7 @@ impl Keyboard {
         let initial_termios = Termios::from_fd(STDIN_FD).ok();
 
         let c = Keyboard {
-            initial_termios: initial_termios,
+            initial_termios,
             key: 0,
             commands: Vec::<Command>::new(),
             key_available: false,
@@ -41,13 +41,12 @@ impl Keyboard {
     }
 
     fn setup_host_terminal(&self, blocking: bool) {
-        if let Some(initial) = self.initial_termios {
-            let mut new_term = initial.clone();
-            new_term.c_iflag &= !(IXON | ICRNL);
-            new_term.c_lflag &= !(ISIG | ECHO | ICANON | IEXTEN);
-            new_term.c_cc[VMIN] = if blocking {1} else {0};
-            new_term.c_cc[VTIME] = 0;
-            tcsetattr(STDIN_FD, TCSANOW, &new_term).unwrap();
+        if let Some(mut initial) = self.initial_termios {
+            initial.c_iflag &= !(IXON | ICRNL);
+            initial.c_lflag &= !(ISIG | ECHO | ICANON | IEXTEN);
+            initial.c_cc[VMIN] = if blocking {1} else {0};
+            initial.c_cc[VTIME] = 0;
+            tcsetattr(STDIN_FD, TCSANOW, &initial).unwrap();
         }
     }
 
@@ -170,10 +169,10 @@ impl Keyboard {
             // Parse the rest
             self.parse_input(size-i, &input[i..]);
         } else if size >= 2 && input[0] == 0xc3 && input[1] == 0xb1 {
-            self.key = ':' as u8; // ñ is on the : position
+            self.key = b':'; // ñ is on the : position
             self.key_available = true;
         } else if size >= 2 && input[0] == 0xc3 && input[1] == 0x91 {
-            self.key = ';' as u8; // Ñ is on the ; position
+            self.key = b';'; // Ñ is on the ; position
             self.key_available = true;
         } else {
             self.key = input[0];

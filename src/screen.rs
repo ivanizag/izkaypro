@@ -28,7 +28,7 @@ const SHOWN_SYSTEM_BITS: u8 = 0b0110_0011;
 impl Screen {
     pub fn new(in_place: bool) -> Screen {
         Screen {
-            in_place: in_place,
+            in_place,
             last_system_bits: 0,
             show_status: false,
             show_help: false,

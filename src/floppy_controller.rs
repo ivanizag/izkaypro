@@ -1,7 +1,7 @@
 use super::media::*;
 
-static DISK_CPM22: &'static [u8] = include_bytes!("../disks/cpm22-rom232.img");
-static DISK_BLANK: &'static [u8] = include_bytes!("../disks/blank.img");
+static DISK_CPM22: &[u8] = include_bytes!("../disks/cpm22-rom232.img");
+static DISK_BLANK: &[u8] = include_bytes!("../disks/blank.img");
 
 pub enum Drive {
     A = 0,
@@ -80,8 +80,8 @@ impl FloppyController {
             data_buffer: Vec::new(),
 
             raise_nmi: false,
-            trace: trace,
-            trace_rw: trace_rw,
+            trace,
+            trace_rw,
         }
     }
 
@@ -148,11 +148,10 @@ impl FloppyController {
             if self.media_selected().is_valid_track(track) {
                 self.track = track;
                 self.status = FDCStatus::NoError as u8;
-                self.raise_nmi = true;
             } else {
                 self.status = FDCStatus::SeekErrorOrRecordNotFound as u8;
-                self.raise_nmi = true;
             }
+            self.raise_nmi = true;
         } else if (command & 0xe0) == 0x80 {
             // READ SECTOR command, type II
             // 100mFEFx
@@ -221,8 +220,8 @@ impl FloppyController {
                 self.data_buffer.push(if side_2 {1} else {0});
                 self.data_buffer.push(sector_id);
                 self.data_buffer.push(2); // For sector size 512
-                self.data_buffer.push(0); // CRC 1
-                self.data_buffer.push(0); // CRC 2
+                self.data_buffer.push(0xde); // CRC 1
+                self.data_buffer.push(0xad); // CRC 2
             } else {
                 if self.trace {
                     println!("FDC: Read address ({},{},{}) = Error", side_2, track, sector);
@@ -319,27 +318,25 @@ impl FloppyController {
     }
 
     pub fn get_data(&mut self) -> u8 {
-        if self.data_buffer.len() > 0 {
+        if !self.data_buffer.is_empty() {
             self.data = self.data_buffer[0];
             self.data_buffer.remove(0);
             self.raise_nmi = true;
-        } else {
-            if self.read_index < self.read_last {
-                // Prepare next byte
-                let index = self.read_index;
-                self.data = self.media_selected().read_byte(index);
-                self.read_index += 1;
-                self.raise_nmi = true;
-                if self.read_index == self.read_last {
-                    // We are done reading
-                    if self.trace {
-                        println!("FDC: Get data completed ${:02x} {}-{}-{}", self.data, self.read_index, self.read_last, self.sector);
-                    }
-                    self.status = FDCStatus::NoError as u8;
-                    self.read_index = 0;
-                    self.read_last = 0;
-                    self.sector += 1;
+        } else if self.read_index < self.read_last {
+            // Prepare next byte
+            let index = self.read_index;
+            self.data = self.media_selected().read_byte(index);
+            self.read_index += 1;
+            self.raise_nmi = true;
+            if self.read_index == self.read_last {
+                // We are done reading
+                if self.trace {
+                    println!("FDC: Get data completed ${:02x} {}-{}-{}", self.data, self.read_index, self.read_last, self.sector);
                 }
+                self.status = FDCStatus::NoError as u8;
+                self.read_index = 0;
+                self.read_last = 0;
+                self.sector += 1;
             }
         }
 

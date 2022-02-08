@@ -13,7 +13,7 @@ use self::screen::Screen;
 use self::keyboard_unix::Command;
 
 // Welcome message
-const WELCOME: &'static str =
+const WELCOME: &str =
 "Kaypro https://github.com/ivanizag/izkaypro
 Emulation of the Kaypro II computer";
 
@@ -121,7 +121,7 @@ fn main() {
             screen.update(&mut machine, false);
         }
 
-        if machine.keyboard.commands.len() != 0 {
+        if !machine.keyboard.commands.is_empty() {
             let commands = machine.keyboard.commands.clone();
             for command in commands {
                 match command {
@@ -241,13 +241,13 @@ fn main() {
                     "unknown"
                 };
 
-                print!("BDOS command {}: {}({:04x})\n", command, name, args);
+                println!("BDOS command {}: {}({:04x})", command, name, args);
             }
         }
     }
 }
 
-const BDOS_COMMAND_NAMES: [&'static str; 50] = [
+const BDOS_COMMAND_NAMES: [&str; 50] = [
     // 0
     "P_TERMCPM", "C_READ", "C_WRITE", "A_READ", "A_WRITE",
     "L_WRITE", "C_RAWIO", "A_STATIN", "A_STATOUT", "C_WRITESTR",

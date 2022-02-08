@@ -27,7 +27,7 @@ pub enum SystemBit {
     Bank = 0x80,
 }
 
-const IO_PORT_NAMES: [&'static str; 32] = [
+const IO_PORT_NAMES: [&str; 32] = [
     /* 0x00 */"Baud rate A, serial",
     /* 0x01 */"-",
     /* 0x02 */"-",
@@ -63,12 +63,12 @@ const IO_PORT_NAMES: [&'static str; 32] = [
     ];
 
 
-//static ROM: &'static [u8] = include_bytes!("../roms/81-149c.rom");
-static ROM: &'static [u8] = include_bytes!("../roms/81-232.rom");
-//static ROM: &'static [u8] = include_bytes!("../roms/kplus83.rom");
-//static ROM: &'static [u8] = include_bytes!("../roms/omni2.u47");
-//static ROM: &'static [u8] = include_bytes!("../roms/kaypro_ii_roadrunner_1_5.bin");
-//static ROM: &'static [u8] = include_bytes!("../roms/trom34_3.rom");
+//static ROM: &[u8] = include_bytes!("../roms/81-149c.rom");
+static ROM: &[u8] = include_bytes!("../roms/81-232.rom");
+//static ROM: &[u8] = include_bytes!("../roms/kplus83.rom");
+//static ROM: &[u8] = include_bytes!("../roms/omni2.u47");
+//static ROM: &[u8] = include_bytes!("../roms/kaypro_ii_roadrunner_1_5.bin");
+//static ROM: &[u8] = include_bytes!("../roms/trom34_3.rom");
 
 pub struct KayproMachine {
     ram: [u8; 65536],
@@ -91,10 +91,10 @@ impl KayproMachine {
             vram: [0; 4096],
             vram_dirty: false,
             system_bits: SystemBit::Bank as u8 | SystemBit::MotorsOff as u8,
-            trace_io: trace_io,
-            trace_system_bits: trace_system_bits,
+            trace_io,
+            trace_system_bits,
             keyboard: Keyboard::new(),
-            floppy_controller: floppy_controller,
+            floppy_controller,
         }
     }
 
