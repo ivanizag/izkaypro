@@ -111,11 +111,6 @@ fn main() {
     let mut next_signal: u64 = 0;
     let mut done = false;
     while !done {
-        let pc = cpu.registers().pc();
-        //cpu.set_trace(pc >= 0xf7fd && pc <= 0xf858);
-        if pc == 0x32c { // && !machine.is_rom_rank(){
-        //    cpu.set_trace(true);
-        }
 
         cpu.execute_instruction(&mut machine);
         counter += 1;
@@ -221,14 +216,10 @@ fn main() {
                 0x0006 => println!("EP_INITVID"),
                 0x0009 => println!("EP_INITDEV"),
                 0x01e7 => println!("EP_HOME"),
-                0x01c3 => {
-                    println!("EP_SELDSK {}", cpu.registers().get8(Reg8::C));
-                },
+                0x01c3 => println!("EP_SELDSK {}", cpu.registers().get8(Reg8::C)),
                 0x01db => println!("EP_SETTRK {}", cpu.registers().get8(Reg8::C)),
                 0x01ca => println!("EP_SETSEC {}", cpu.registers().get8(Reg8::C)),
-                0x01d6 => {
-                    println!("EP_SETDMA");
-                },
+                0x01d6 => println!("EP_SETDMA"),
                 0x01fb => println!("EP_READ {:04x}", dma),
                 0x0216 => println!("EP_WRITE {:04x}", dma),
                 0x0479 => println!("EP_SECTRAN"),

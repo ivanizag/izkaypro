@@ -262,7 +262,10 @@ impl FloppyController {
         }
     }
 
-    pub fn get_status(&self) -> u8 {
+    pub fn get_status(&mut self) -> u8 {
+        // Consume data if queued
+        self.get_data();
+
         self.status
     }
 

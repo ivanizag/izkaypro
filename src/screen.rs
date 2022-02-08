@@ -96,7 +96,7 @@ impl Screen {
             print!("\x1b[{}A", 26);
         }
 
-        let mut disk_status = "========".to_owned();
+        let mut disk_status = "======".to_owned();
         if self.show_status && machine.floppy_controller.motor_on {
             if machine.floppy_controller.drive == 0 {
                 disk_status = " A".to_owned();
@@ -129,7 +129,7 @@ impl Screen {
             }
             println!(" ||");
         }
-        println!("\\\\======{}=================================== F1 for help ==== F4 to exit ====//", disk_status);
+        println!("\\\\======{}==================================== F1 for help ==== F4 to exit ====//", disk_status);
         //println!("\\\\==================================================================================//");
 
         if self.show_help {
