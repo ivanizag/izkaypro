@@ -155,7 +155,7 @@ ARGS:
 
 ## Resources
 
-- [ROM disassembled and commented](https://github.com/ivanizag/kaypro-disassembled)
+- [ROM disassembled and commented](https://github.com/ivanizag/kaypro-disassembly)
 - [Kaypro manuals in bitsavers](http://bitsavers.informatik.uni-stuttgart.de/pdf/kaypro/)
 - [Disks from retriarchive](http://www.retroarchive.org/maslin/disks/kaypro/)
 - [ImageDisk and system images](http://dunfield.classiccmp.org/img/index.htm)
