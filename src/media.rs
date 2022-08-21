@@ -32,24 +32,24 @@ File images:
     and so on.
 */
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq)]
 pub enum MediaFormat {
     Unformatted,
-    SSSD,     // Single-sided, single-density
-    SSDD,     // Single-sided, double-density
-    DSDD,     // Double-sided, double-density
+    SsSd,     // Single-sided, single-density
+    SsDd,     // Single-sided, double-density
+    DsDd,     // Double-sided, double-density
 }
 
 const SECTOR_SIZE: usize = 512;
 
 fn detect_media_format(len: usize) -> MediaFormat {
     if len == 102400 {
-        MediaFormat::SSSD
+        MediaFormat::SsSd
     } else if (204800..=205824).contains(&len) {
         // Some valid disk images are a bit bigger, I don't know why
-        MediaFormat::SSDD
+        MediaFormat::SsDd
     } else if (409600..=411648).contains(&len) {
-        MediaFormat::DSDD
+        MediaFormat::DsDd
     } else {
         MediaFormat::Unformatted
     }
@@ -67,32 +67,32 @@ pub struct Media {
 
 impl Media {
     pub fn double_sided(&self) -> bool {
-        self.format == MediaFormat::DSDD
+        self.format == MediaFormat::DsDd
     }
 
     pub fn tracks(&self) -> u8 {
         match self.format {
-            MediaFormat::SSSD => 40,
-            MediaFormat::SSDD => 40,
-            MediaFormat::DSDD => 40,
+            MediaFormat::SsSd => 40,
+            MediaFormat::SsDd => 40,
+            MediaFormat::DsDd => 40,
             MediaFormat::Unformatted => 0,
         }
     }
 
     pub fn sectors_per_side(&self) -> u8 {
         match self.format {
-            MediaFormat::SSSD => 10,
-            MediaFormat::SSDD => 10,
-            MediaFormat::DSDD => 10,
+            MediaFormat::SsSd => 10,
+            MediaFormat::SsDd => 10,
+            MediaFormat::DsDd => 10,
             MediaFormat::Unformatted => 0,
         }
     }
 
     pub fn sectors(&self) -> u8 {
         match self.format {
-            MediaFormat::SSSD => 10,
-            MediaFormat::SSDD => 10,
-            MediaFormat::DSDD => 20,
+            MediaFormat::SsSd => 10,
+            MediaFormat::SsDd => 10,
+            MediaFormat::DsDd => 20,
             MediaFormat::Unformatted => 0,
         }
     }
@@ -239,9 +239,9 @@ impl Media {
             } + " " +
             match self.format {
                 MediaFormat::Unformatted => " (unformatted)",
-                MediaFormat::SSSD => " (SSSD)",
-                MediaFormat::SSDD => " (SSDD)",
-                MediaFormat::DSDD => " (DSDD)",
+                MediaFormat::SsSd => " (SSSD)",
+                MediaFormat::SsDd => " (SSDD)",
+                MediaFormat::DsDd => " (DSDD)",
             } + ")"
     }
 }
