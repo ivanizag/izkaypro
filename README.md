@@ -2,7 +2,7 @@
 
 ## What is this?
 
-This is a Kaypro II emulator that runs on a Linux terminal. It can boot and use disk images for the Kaypro and display.
+This is a Kaypro II emulator that runs on a Linux terminal. It can boot and use disk images for the Kaypro.
 
 Uses the [iz80](https://github.com/ivanizag/iz80) library. Made with Rust.
 
