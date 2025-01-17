@@ -3,9 +3,15 @@ name = "izkaypro"
 version = "0.1.1"
 authors = ["Ivan Izaguirre <ivanizag@gmail.com>"]
 edition = "2018"
+repository = "https://github.com/ivanizag/izkaypro"
 
 [dependencies]
 iz80 = "^0.3.5"
 #iz80 = {path = "../iz80"}
 clap = "^2"
 termios = "^0.3.3"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
